@@ -1,7 +1,8 @@
 FROM node:20-slim
 
-# System deps needed for canvas, sharp, ffmpeg
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
+    git \
     ffmpeg \
     libcairo2-dev \
     libpango1.0-dev \
@@ -18,34 +19,28 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Disable Puppeteer/Chromium download
+ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_CACHE_DIR=/tmp/puppeteer_disabled
-ENV NODE_ENV=production
 
-# Copy dependency files first (better caching)
+# Copy package file
 COPY package.json ./
 
 # Install dependencies
-RUN npm install --omit=dev --ignore-scripts=false
+RUN npm install --omit=dev
 
-# Copy source code
+# Copy project
 COPY . .
 
-# Create required runtime directories
+# Create runtime folders
 RUN mkdir -p sessions tmp temp public
 
-# HuggingFace Spaces runs as non-root user
-RUN useradd -m -u 1000 botuser && chown -R botuser:botuser /app
+# Create non-root user
+RUN useradd -m botuser && chown -R botuser:botuser /app
 USER botuser
 
-# HuggingFace Spaces uses port 7860
-EXPOSE 7860
+# Render provides PORT automatically
+ENV PORT=10000
+EXPOSE 10000
 
-ENV PORT=7860
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:7860/health || exit 1
-
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
