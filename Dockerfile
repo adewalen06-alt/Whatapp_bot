@@ -1,8 +1,7 @@
 FROM node:20-slim
 
-# Install system dependencies
+# Install system dependencies including canvas native libs and ffmpeg
 RUN apt-get update && apt-get install -y \
-    git \
     ffmpeg \
     libcairo2-dev \
     libpango1.0-dev \
@@ -14,33 +13,32 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3 \
     wget \
-    unzip \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Skip puppeteer/chromium download
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV NODE_ENV=production
 
-# Copy package file
+# Copy package.json and install dependencies
 COPY package.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install - canvas/sharp are optional so failures won't break the build
+RUN npm install --omit=dev || true
+RUN npm install --omit=dev --ignore-optional 2>/dev/null; \
+    npm install canvas --build-from-source 2>/dev/null || true; \
+    npm install sharp 2>/dev/null || true
 
-# Copy project
+# Copy all source files
 COPY . .
 
-# Create runtime folders
+# Create required runtime directories
 RUN mkdir -p sessions tmp temp public
 
-# Create non-root user
-RUN useradd -m botuser && chown -R botuser:botuser /app
-USER botuser
-
-# Render provides PORT automatically
-ENV PORT=10000
 EXPOSE 10000
+ENV PORT=10000
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

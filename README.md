@@ -2,7 +2,7 @@
 title: Topai WhatsApp Bot
 emoji: 🤖
 colorFrom: green
-colorTo: teal
+colorTo: blue
 sdk: docker
 pinned: false
 license: mit
