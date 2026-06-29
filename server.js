@@ -18,7 +18,8 @@ const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  Browsers
 } = require('@whiskeysockets/baileys');
 
 const config = require('./config');
@@ -93,19 +94,23 @@ async function startSession(phone, method = 'qr') {
       version,
       logger: silentLogger,
       printQRInTerminal: false,
-      browser: ['Chrome', 'Windows', '10.0'],
+      browser: Browsers.ubuntu('Chrome'),
       auth: state,
       syncFullHistory: false,
       downloadHistory: false,
       markOnlineOnConnect: false,
+      generateHighQualityLinkPreview: false,
       getMessage: async () => undefined
     });
 
     sessionData.sock = sock;
 
-    // Request pair code if method is 'pair' and not already registered
+    // Request pair code when socket is ready (not yet registered)
+    let pairCodeRequested = false;
     if (usePairCode && !state.creds.registered) {
-      setTimeout(async () => {
+      const requestCode = async () => {
+        if (pairCodeRequested) return;
+        pairCodeRequested = true;
         try {
           const code = await sock.requestPairingCode(cleanPhone);
           const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
@@ -113,10 +118,26 @@ async function startSession(phone, method = 'qr') {
           sessionData.status = 'awaiting_pair';
           broadcastToPhone(cleanPhone, { status: 'pair_code', pairCode: formatted });
         } catch (err) {
-          sessionData.status = 'error';
-          broadcastToPhone(cleanPhone, { status: 'error', error: err.message });
+          // Retry once after 3 seconds
+          pairCodeRequested = false;
+          setTimeout(async () => {
+            if (pairCodeRequested) return;
+            pairCodeRequested = true;
+            try {
+              const code = await sock.requestPairingCode(cleanPhone);
+              const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+              sessionData.pairCode = formatted;
+              sessionData.status = 'awaiting_pair';
+              broadcastToPhone(cleanPhone, { status: 'pair_code', pairCode: formatted });
+            } catch (err2) {
+              sessionData.status = 'error';
+              broadcastToPhone(cleanPhone, { status: 'error', error: 'Failed to get pair code. Try again.' });
+            }
+          }, 3000);
         }
-      }, 3000);
+      };
+      // Wait 5 seconds for WebSocket to be ready (important on slow servers)
+      setTimeout(requestCode, 5000);
     }
 
     sock.ev.on('creds.update', saveCreds);
