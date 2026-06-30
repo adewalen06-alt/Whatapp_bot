@@ -5,8 +5,8 @@
 module.exports = {
     // Bot Owner Configuration
     ownerNumber: [
-'2349137250390'], // Add your number without + or spaces (e.g., 919876543210)
-    ownerName: ['Nife'], // Owner names corresponding to ownerNumber array
+'2347026096039'], // Add your number without + or spaces (e.g., 919876543210)
+    ownerName: ['muzan kibutsuji'], // Owner names corresponding to ownerNumber array
     
     // Bot Configuration
     botName: 'Topai',
@@ -14,7 +14,7 @@ module.exports = {
     sessionName: 'session',
     sessionID: process.env.SESSION_ID || '',
     newsletterJid: '120363161513685998@newsletter', // Newsletter JID for menu forwarding
-    updateZipUrl: 'https://github.com/adewalen06-alt/Whatapp_bot/blob/main/topai-bot.zip', // URL to latest code zip for .update command
+    updateZipUrl: 'https://github.com/mruniquehacker/KnightBot-Mini/archive/refs/heads/main.zip', // URL to latest code zip for .update command
     
     // Sticker Configuration
     packname: 'TOPAI',

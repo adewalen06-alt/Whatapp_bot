@@ -24,6 +24,7 @@ const {
 
 const config = require('./config');
 const handler = require('./handler');
+const mcManager = require('./minecraft/botManager');
 
 const app = express();
 const PORT = process.env.PORT || 7860;
@@ -325,9 +326,81 @@ app.get('/api/events/:phone', (req, res) => {
   });
 });
 
+// Minecraft UI
+app.get('/minecraft', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'minecraft.html'));
+});
+
+// ─── Minecraft Bot Routes ─────────────────────────────────────────────────────
+
+// List all MC bots
+app.get('/api/mc/bots', (req, res) => {
+  res.json({ bots: mcManager.getAllBots() });
+});
+
+// Connect a new MC bot
+app.post('/api/mc/connect', requirePin, async (req, res) => {
+  const result = await mcManager.createBot(req.body);
+  res.json(result);
+});
+
+// Get status of a specific bot
+app.get('/api/mc/status/:id', (req, res) => {
+  const status = mcManager.getStatus(req.params.id);
+  if (!status) return res.json({ error: 'Bot not found' });
+  res.json(status);
+});
+
+// Disconnect / stop a bot
+app.post('/api/mc/disconnect/:id', requirePin, async (req, res) => {
+  await mcManager.destroyBot(req.params.id);
+  res.json({ success: true });
+});
+
+// Send a chat message / command
+app.post('/api/mc/chat/:id', requirePin, async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'message required' });
+  const result = await mcManager.sendChat(req.params.id, message);
+  res.json(result);
+});
+
+// Set a task (goto / mine / craft / idle)
+app.post('/api/mc/task/:id', requirePin, async (req, res) => {
+  const result = await mcManager.setTask(req.params.id, req.body);
+  res.json(result);
+});
+
+// SSE — real-time events per bot
+app.get('/api/mc/events/:id', (req, res) => {
+  const serverId = req.params.id;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  if (!mcManager.sseClients.has(serverId)) mcManager.sseClients.set(serverId, new Set());
+  mcManager.sseClients.get(serverId).add(res);
+
+  // Send current state immediately
+  const status = mcManager.getStatus(serverId);
+  if (status) {
+    res.write(`data: ${JSON.stringify({ event: 'status', status: status.status, username: status.username })}\n\n`);
+    if (status.logs) {
+      status.logs.forEach(entry => {
+        res.write(`data: ${JSON.stringify({ event: 'log', ...entry })}\n\n`);
+      });
+    }
+  }
+
+  req.on('close', () => {
+    mcManager.sseClients.get(serverId)?.delete(res);
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ ok: true, sessions: sessions.size, uptime: process.uptime() });
+  res.json({ ok: true, sessions: sessions.size, mcBots: mcManager.getAllBots().length, uptime: process.uptime() });
 });
 
 // ─── Auto-restore sessions from disk ─────────────────────────────────────────

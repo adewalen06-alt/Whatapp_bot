@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Topai MC Bot</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#25D366;--green-dark:#128C7E;--bg:#0a0f0d;--card:#111916;
+      --border:#1e2e23;--text:#e8f5e3;--muted:#6b8f72;--error:#ff5a5a;
+      --warn:#ffb347;--blue:#00bcd4;
+    }
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px;}
+
+    /* PIN Overlay */
+    #pin-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:24px;}
+    #pin-overlay .logo{font-size:2rem;font-weight:800;color:var(--green);margin-bottom:4px;}
+    #pin-overlay .logo span{color:var(--text);}
+    #pin-overlay .subtitle{color:var(--muted);font-size:.9rem;margin-bottom:28px;}
+    .pin-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:340px;}
+    .pin-card h2{font-size:1rem;font-weight:600;text-align:center;margin-bottom:16px;}
+    .pin-card .lock{font-size:2.2rem;text-align:center;margin-bottom:12px;}
+    #pin-input{width:100%;padding:12px 16px;background:#0d1a10;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1.1rem;text-align:center;letter-spacing:4px;outline:none;}
+    #pin-input:focus{border-color:var(--green);}
+    #pin-error{margin-top:8px;color:var(--error);font-size:.82rem;text-align:center;min-height:18px;}
+    #pin-submit{width:100%;margin-top:14px;padding:12px;background:var(--green);color:#000;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-size:.95rem;}
+    #pin-submit:hover{opacity:.9;}
+    #pin-submit:disabled{opacity:.5;cursor:not-allowed;}
+
+    /* App */
+    #app{display:none;width:100%;max-width:860px;flex-direction:column;align-items:stretch;}
+    #app.show{display:flex;}
+
+    header{text-align:center;margin-bottom:28px;}
+    header .logo{font-size:2rem;font-weight:800;color:var(--green);}
+    header .logo span{color:var(--text);}
+    header p{color:var(--muted);font-size:.9rem;margin-top:4px;}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:#0d2014;border:1px solid var(--border);border-radius:99px;padding:4px 12px;font-size:.78rem;color:var(--green);margin-top:8px;}
+    .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;}
+    .card h3{font-size:.95rem;font-weight:700;margin-bottom:16px;color:var(--text);}
+
+    /* Form */
+    .form-row{display:grid;gap:10px;margin-bottom:12px;}
+    .form-row.two{grid-template-columns:1fr 1fr;}
+    .form-row.three{grid-template-columns:1fr 1fr 1fr;}
+    label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;}
+    input,select,textarea{width:100%;padding:10px 13px;background:#0d1a10;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.9rem;outline:none;font-family:inherit;}
+    input:focus,select:focus,textarea:focus{border-color:var(--green);}
+    input::placeholder,textarea::placeholder{color:var(--muted);}
+    select option{background:#0d1a10;}
+    textarea{resize:vertical;min-height:60px;}
+
+    .btn{padding:10px 18px;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:.88rem;transition:opacity .2s;}
+    .btn-green{background:var(--green);color:#000;}
+    .btn-green:hover{opacity:.9;}
+    .btn-red{background:transparent;border:1px solid var(--error);color:var(--error);}
+    .btn-red:hover{background:#1a0000;}
+    .btn-blue{background:transparent;border:1px solid var(--blue);color:var(--blue);}
+    .btn-blue:hover{background:#001a1a;}
+    .btn-muted{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn-muted:hover{border-color:var(--text);color:var(--text);}
+    .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Bot cards */
+    .bot-card{background:#0d1a10;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;}
+    .bot-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .bot-name{font-weight:700;font-size:1rem;}
+    .bot-host{color:var(--muted);font-size:.8rem;margin-top:2px;}
+    .bot-actions{display:flex;gap:6px;flex-wrap:wrap;}
+    .status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:600;}
+    .pill-connected{background:#001a0a;color:var(--green);border:1px solid var(--green-dark);}
+    .pill-connecting{background:#1a1a00;color:var(--warn);border:1px solid #3a3a00;}
+    .pill-disconnected,.pill-error,.pill-kicked{background:#1a0000;color:var(--error);border:1px solid #3a0000;}
+    .pill-reconnecting{background:#001a1a;color:var(--blue);border:1px solid #003a3a;}
+    .pill-stopped{background:#111;color:var(--muted);border:1px solid var(--border);}
+
+    /* Stats row */
+    .stats-row{display:flex;gap:12px;margin:8px 0;flex-wrap:wrap;}
+    .stat{font-size:.8rem;color:var(--muted);}
+    .stat span{color:var(--text);font-weight:600;}
+
+    /* Console */
+    .console-wrap{margin-top:10px;}
+    .console{background:#060e09;border:1px solid var(--border);border-radius:8px;padding:10px;height:180px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.75rem;line-height:1.5;}
+    .log-info{color:#aaa;}
+    .log-success{color:var(--green);}
+    .log-warn{color:var(--warn);}
+    .log-error{color:var(--error);}
+    .log-chat{color:var(--blue);}
+
+    /* Task panel */
+    .task-panel{margin-top:10px;padding:12px;background:#060e09;border:1px solid var(--border);border-radius:10px;display:none;}
+    .task-panel.show{display:block;}
+    .task-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+    .task-tab{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;cursor:pointer;}
+    .task-tab.active{border-color:var(--green);color:var(--green);background:#0d2014;}
+
+    /* Chat input */
+    .chat-row{display:flex;gap:8px;margin-top:10px;}
+    .chat-row input{flex:1;}
+    .chat-row button{flex-shrink:0;}
+
+    /* Empty state */
+    .empty{color:var(--muted);font-size:.88rem;text-align:center;padding:20px 0;}
+
+    footer{margin-top:32px;color:var(--muted);font-size:.75rem;text-align:center;}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:5px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<!-- PIN Overlay -->
+<div id="pin-overlay">
+  <div class="logo">Topai<span>MC</span></div>
+  <p class="subtitle">Minecraft Bot Manager</p>
+  <div class="pin-card">
+    <div class="lock">🔐</div>
+    <h2>Enter Admin PIN</h2>
+    <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="20" autocomplete="off"/>
+    <div id="pin-error"></div>
+    <button id="pin-submit">Unlock</button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <header>
+    <div class="logo">Topai<span>MC</span></div>
+    <p>Minecraft Bot Manager — Multi-Server Edition</p>
+    <div class="badge"><span class="dot"></span><span>Server Online</span></div>
+  </header>
+
+  <!-- Add Bot Form -->
+  <div class="card">
+    <h3>➕ Connect New Bot</h3>
+    <div class="form-row three">
+      <div>
+        <label>Server Host *</label>
+        <input type="text" id="mc-host" placeholder="play.example.com"/>
+      </div>
+      <div>
+        <label>Port</label>
+        <input type="text" id="mc-port" placeholder="25565" value="25565"/>
+      </div>
+      <div>
+        <label>MC Version</label>
+        <input type="text" id="mc-version" placeholder="auto (e.g. 1.21.1)"/>
+      </div>
+    </div>
+    <div class="form-row two">
+      <div>
+        <label>Bot ID (unique name) *</label>
+        <input type="text" id="mc-id" placeholder="e.g. bot1"/>
+      </div>
+      <div>
+        <label>Auth Mode</label>
+        <select id="mc-auth">
+          <option value="offline">Offline (cracked/private servers)</option>
+          <option value="microsoft">Microsoft (online-mode servers)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Usernames / Account Rotation (one per line — bot auto-rotates on ban)</label>
+        <textarea id="mc-accounts" rows="3" placeholder="Steve&#10;Alex&#10;Notch"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-green" id="mc-connect-btn" onclick="connectBot()">⚡ Connect Bot</button>
+  </div>
+
+  <!-- Bots List -->
+  <div class="card">
+    <h3>🤖 Active Bots (<span id="bot-count">0</span>)</h3>
+    <div id="bots-list"><p class="empty">No bots connected yet.</p></div>
+  </div>
+
+  <div style="margin-top:8px;margin-bottom:16px;">
+    <a href="/" style="display:flex;align-items:center;gap:10px;background:#0d1a10;border:1px solid var(--border);border-radius:14px;padding:14px;text-decoration:none;color:var(--text);font-weight:600;font-size:.9rem;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+      <span style="font-size:1.4rem;">💬</span>
+      <div><div>WhatsApp Bot Manager</div><div style="color:var(--muted);font-size:.78rem;font-weight:400;">Multi-session · QR & Pair Code · All commands</div></div>
+      <span style="margin-left:auto;color:var(--muted);">→</span>
+    </a>
+  </div>
+  <footer>Topai MC Bot · Powered by Mineflayer · Anti-Detection Built-In</footer>
+</div>
+
+<script>
+const PIN_KEY = 'topai_admin_pin';
+let adminPin = sessionStorage.getItem(PIN_KEY) || '';
+const eventSources = {};
+const botStates = {};
+
+function pinHeaders(extra = {}) {
+  return { 'Content-Type': 'application/json', 'X-Admin-Pin': adminPin, ...extra };
+}
+
+// ── PIN ───────────────────────────────────────────────────────────────────────
+async function checkStoredPin() {
+  if (!adminPin) return;
+  try {
+    const r = await fetch('/api/verify-pin', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pin: adminPin })
+    });
+    if (r.ok) { unlockApp(); return; }
+  } catch(_) {}
+  sessionStorage.removeItem(PIN_KEY); adminPin = '';
+}
+
+async function submitPin() {
+  const input = document.getElementById('pin-input');
+  const btn = document.getElementById('pin-submit');
+  const pin = input.value.trim();
+  if (!pin) return;
+  btn.disabled = true; btn.textContent = 'Checking...';
+  try {
+    const r = await fetch('/api/verify-pin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      adminPin = pin; sessionStorage.setItem(PIN_KEY, pin); unlockApp();
+    } else {
+      document.getElementById('pin-error').textContent = '❌ Wrong PIN';
+      input.value = ''; input.focus();
+    }
+  } catch(_) { document.getElementById('pin-error').textContent = '❌ Server error'; }
+  btn.disabled = false; btn.textContent = 'Unlock';
+}
+
+function unlockApp() {
+  document.getElementById('pin-overlay').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  loadBots();
+  setInterval(loadBots, 8000);
+}
+
+document.getElementById('pin-submit').onclick = submitPin;
+document.getElementById('pin-input').onkeydown = e => {
+  if (e.key === 'Enter') submitPin();
+  document.getElementById('pin-error').textContent = '';
+};
+
+// ── Connect Bot ───────────────────────────────────────────────────────────────
+async function connectBot() {
+  const host = document.getElementById('mc-host').value.trim();
+  const port = document.getElementById('mc-port').value.trim() || '25565';
+  const serverId = document.getElementById('mc-id').value.trim();
+  const version = document.getElementById('mc-version').value.trim() || undefined;
+  const auth = document.getElementById('mc-auth').value;
+  const accountsRaw = document.getElementById('mc-accounts').value.trim();
+  const accounts = accountsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+  if (!host || !serverId || !accounts.length) {
+    alert('Host, Bot ID, and at least one username are required.');
+    return;
+  }
+
+  const btn = document.getElementById('mc-connect-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Connecting...';
+
+  const res = await fetch('/api/mc/connect', {
+    method: 'POST', headers: pinHeaders(),
+    body: JSON.stringify({ serverId, host, port, username: accounts[0], accounts, version, auth })
+  });
+
+  if (res.status === 401) { sessionStorage.removeItem(PIN_KEY); location.reload(); return; }
+  const data = await res.json();
+
+  btn.disabled = false; btn.innerHTML = '⚡ Connect Bot';
+
+  if (!data.success) { alert('Error: ' + data.error); return; }
+
+  subscribeBot(serverId);
+  setTimeout(loadBots, 500);
+}
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+function subscribeBot(serverId) {
+  if (eventSources[serverId]) eventSources[serverId].close();
+  const es = new EventSource(`/api/mc/events/${serverId}`);
+  eventSources[serverId] = es;
+
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    handleBotEvent(serverId, data);
+  };
+  es.onerror = () => {};
+}
+
+function handleBotEvent(serverId, data) {
+  if (!botStates[serverId]) botStates[serverId] = {};
+  const state = botStates[serverId];
+
+  if (data.event === 'status') {
+    state.status = data.status;
+    state.username = data.username || state.username;
+    updateBotCard(serverId);
+  } else if (data.event === 'stats') {
+    state.health = data.health;
+    state.food = data.food;
+    updateBotStats(serverId);
+  } else if (data.event === 'position') {
+    state.position = data.position;
+    updateBotStats(serverId);
+  } else if (data.event === 'task') {
+    state.task = data.task;
+    updateBotStats(serverId);
+  } else if (data.event === 'log') {
+    appendLog(serverId, data);
+  } else if (data.event === 'banned') {
+    appendLog(serverId, { message: `🔄 Switching account → ${data.nextAccount}`, type: 'warn', time: new Date().toISOString() });
+  }
+}
+
+function appendLog(serverId, entry) {
+  const console_ = document.getElementById(`console-${serverId}`);
+  if (!console_) return;
+  const span = document.createElement('div');
+  span.className = `log-${entry.type || 'info'}`;
+  const t = new Date(entry.time).toLocaleTimeString();
+  span.textContent = `[${t}] ${entry.message}`;
+  console_.appendChild(span);
+  if (console_.children.length > 100) console_.removeChild(console_.firstChild);
+  console_.scrollTop = console_.scrollHeight;
+}
+
+function updateBotCard(serverId) {
+  const state = botStates[serverId];
+  const pill = document.getElementById(`pill-${serverId}`);
+  const nameEl = document.getElementById(`name-${serverId}`);
+  if (pill) {
+    pill.className = `status-pill pill-${state.status || 'connecting'}`;
+    pill.textContent = state.status || 'connecting';
+  }
+  if (nameEl && state.username) nameEl.textContent = state.username;
+}
+
+function updateBotStats(serverId) {
+  const state = botStates[serverId];
+  const statsEl = document.getElementById(`stats-${serverId}`);
+  if (!statsEl) return;
+  const pos = state.position;
+  const posStr = pos ? `${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}` : '—';
+  statsEl.innerHTML = `
+    <div class="stat">❤️ Health: <span>${Math.round(state.health ?? 20)}/20</span></div>
+    <div class="stat">🍖 Food: <span>${Math.round(state.food ?? 20)}/20</span></div>
+    <div class="stat">📍 Pos: <span>${posStr}</span></div>
+    <div class="stat">📋 Task: <span>${state.task ? state.task.type : 'idle'}</span></div>
+  `;
+}
+
+// ── Load Bots ─────────────────────────────────────────────────────────────────
+async function loadBots() {
+  const res = await fetch('/api/mc/bots');
+  const { bots } = await res.json();
+  document.getElementById('bot-count').textContent = bots.length;
+
+  const list = document.getElementById('bots-list');
+
+  if (bots.length === 0) {
+    list.innerHTML = '<p class="empty">No bots connected yet.</p>';
+    return;
+  }
+
+  bots.forEach(b => {
+    if (!botStates[b.serverId]) botStates[b.serverId] = {};
+    Object.assign(botStates[b.serverId], b);
+
+    if (!document.getElementById(`bot-${b.serverId}`)) {
+      list.appendChild(createBotCard(b));
+      subscribeBot(b.serverId);
+    }
+    updateBotCard(b.serverId);
+    updateBotStats(b.serverId);
+  });
+
+  // Remove cards for bots no longer in list
+  const ids = bots.map(b => b.serverId);
+  list.querySelectorAll('[id^="bot-"]').forEach(el => {
+    const id = el.id.replace('bot-', '');
+    if (!ids.includes(id)) el.remove();
+  });
+
+  if (list.children.length === 0) list.innerHTML = '<p class="empty">No bots connected yet.</p>';
+}
+
+function createBotCard(b) {
+  const div = document.createElement('div');
+  div.className = 'bot-card';
+  div.id = `bot-${b.serverId}`;
+
+  div.innerHTML = `
+    <div class="bot-header">
+      <div>
+        <div class="bot-name">
+          🤖 <span id="name-${b.serverId}">${b.username}</span>
+          <span id="pill-${b.serverId}" class="status-pill pill-${b.status}">${b.status}</span>
+        </div>
+        <div class="bot-host">${b.host}:${b.port} · ID: ${b.serverId}</div>
+      </div>
+      <div class="bot-actions">
+        <button class="btn btn-blue btn-sm" onclick="toggleTaskPanel('${b.serverId}')">🎮 Tasks</button>
+        <button class="btn btn-red" onclick="disconnectBot('${b.serverId}')">✕ Stop</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-${b.serverId}">
+      <div class="stat">❤️ Health: <span>—</span></div>
+      <div class="stat">🍖 Food: <span>—</span></div>
+      <div class="stat">📍 Pos: <span>—</span></div>
+      <div class="stat">📋 Task: <span>idle</span></div>
+    </div>
+
+    <!-- Task Panel -->
+    <div class="task-panel" id="task-panel-${b.serverId}">
+      <div class="task-tabs">
+        <button class="task-tab active" onclick="switchTab('${b.serverId}','goto',this)">🚶 Move</button>
+        <button class="task-tab" onclick="switchTab('${b.serverId}','mine',this)">⛏️ Mine</button>
+        <button class="task-tab" onclick="switchTab('${b.serverId}','craft',this)">🔨 Craft</button>
+        <button class="task-tab" onclick="switchTab('${b.serverId}','idle',this)">😴 Idle</button>
+        <button class="task-tab" onclick="switchTab('${b.serverId}','chat',this)">💬 Chat</button>
+      </div>
+
+      <!-- Move -->
+      <div id="tab-goto-${b.serverId}">
+        <div class="form-row three">
+          <div><label>X</label><input type="number" id="goto-x-${b.serverId}" placeholder="100"/></div>
+          <div><label>Y</label><input type="number" id="goto-y-${b.serverId}" placeholder="64"/></div>
+          <div><label>Z</label><input type="number" id="goto-z-${b.serverId}" placeholder="200"/></div>
+        </div>
+        <button class="btn btn-green" onclick="runTask('${b.serverId}','goto')">🚶 Go There</button>
+      </div>
+
+      <!-- Mine -->
+      <div id="tab-mine-${b.serverId}" style="display:none">
+        <div class="form-row two">
+          <div><label>Block Name</label><input type="text" id="mine-block-${b.serverId}" placeholder="stone, diamond_ore, coal_ore..."/></div>
+          <div><label>Count</label><input type="number" id="mine-count-${b.serverId}" placeholder="64" value="64"/></div>
+        </div>
+        <button class="btn btn-green" onclick="runTask('${b.serverId}','mine')">⛏️ Start Mining</button>
+        <button class="btn btn-muted" style="margin-left:8px" onclick="stopTask('${b.serverId}')">⛔ Stop</button>
+      </div>
+
+      <!-- Craft -->
+      <div id="tab-craft-${b.serverId}" style="display:none">
+        <div class="form-row two">
+          <div><label>Item Name</label><input type="text" id="craft-item-${b.serverId}" placeholder="crafting_table, stick, planks..."/></div>
+          <div><label>Count</label><input type="number" id="craft-count-${b.serverId}" placeholder="1" value="1"/></div>
+        </div>
+        <button class="btn btn-green" onclick="runTask('${b.serverId}','craft')">🔨 Craft It</button>
+      </div>
+
+      <!-- Idle -->
+      <div id="tab-idle-${b.serverId}" style="display:none">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:10px;">Bot will wander, look around, and act human. No active task.</p>
+        <button class="btn btn-green" onclick="runTask('${b.serverId}','idle')">😴 Set Idle</button>
+        <button class="btn btn-muted" style="margin-left:8px" onclick="stopTask('${b.serverId}')">⛔ Stop Current</button>
+      </div>
+
+      <!-- Chat -->
+      <div id="tab-chat-${b.serverId}" style="display:none">
+        <div class="chat-row">
+          <input type="text" id="chat-input-${b.serverId}" placeholder="Type a message or /command..."/>
+          <button class="btn btn-green" onclick="sendChat('${b.serverId}')">Send</button>
+        </div>
+        <p style="color:var(--muted);font-size:.78rem;margin-top:8px;">Prefix with / to send commands (e.g. /gamemode survival)</p>
+      </div>
+    </div>
+
+    <!-- Console -->
+    <div class="console-wrap">
+      <div class="console" id="console-${b.serverId}"></div>
+    </div>
+  `;
+  return div;
+}
+
+function toggleTaskPanel(serverId) {
+  const panel = document.getElementById(`task-panel-${serverId}`);
+  panel.classList.toggle('show');
+}
+
+function switchTab(serverId, tab, btn) {
+  const panel = document.getElementById(`task-panel-${serverId}`);
+  panel.querySelectorAll('.task-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['goto','mine','craft','idle','chat'].forEach(t => {
+    const el = document.getElementById(`tab-${t}-${serverId}`);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+}
+
+async function runTask(serverId, type) {
+  let task = { type };
+  if (type === 'goto') {
+    task.x = document.getElementById(`goto-x-${serverId}`)?.value;
+    task.y = document.getElementById(`goto-y-${serverId}`)?.value;
+    task.z = document.getElementById(`goto-z-${serverId}`)?.value;
+    if (!task.x || !task.y || !task.z) { alert('Enter X, Y, Z coordinates'); return; }
+  } else if (type === 'mine') {
+    task.block = document.getElementById(`mine-block-${serverId}`)?.value.trim();
+    task.count = document.getElementById(`mine-count-${serverId}`)?.value;
+    if (!task.block) { alert('Enter block name'); return; }
+  } else if (type === 'craft') {
+    task.item = document.getElementById(`craft-item-${serverId}`)?.value.trim();
+    task.count = document.getElementById(`craft-count-${serverId}`)?.value;
+    if (!task.item) { alert('Enter item name'); return; }
+  }
+
+  const res = await fetch(`/api/mc/task/${serverId}`, {
+    method: 'POST', headers: pinHeaders(),
+    body: JSON.stringify(task)
+  });
+  if (res.status === 401) { sessionStorage.removeItem(PIN_KEY); location.reload(); }
+}
+
+async function stopTask(serverId) {
+  await fetch(`/api/mc/task/${serverId}`, {
+    method: 'POST', headers: pinHeaders(),
+    body: JSON.stringify({ type: 'idle' })
+  });
+}
+
+async function sendChat(serverId) {
+  const input = document.getElementById(`chat-input-${serverId}`);
+  const msg = input?.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const res = await fetch(`/api/mc/chat/${serverId}`, {
+    method: 'POST', headers: pinHeaders(),
+    body: JSON.stringify({ message: msg })
+  });
+  if (res.status === 401) { sessionStorage.removeItem(PIN_KEY); location.reload(); }
+}
+
+async function disconnectBot(serverId) {
+  if (eventSources[serverId]) { eventSources[serverId].close(); delete eventSources[serverId]; }
+  await fetch(`/api/mc/disconnect/${serverId}`, { method: 'POST', headers: pinHeaders() });
+  document.getElementById(`bot-${serverId}`)?.remove();
+  delete botStates[serverId];
+  loadBots();
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+checkStoredPin();
+</script>
+</body>
+</html>
