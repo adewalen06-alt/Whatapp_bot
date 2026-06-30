@@ -4,61 +4,63 @@
 
 module.exports = {
     // Bot Owner Configuration
-    ownerNumber: ['2349137250390'],
-    ownerName: ['Adewale'],
-
+    ownerNumber: [
+'2347026096039'], // Add your number without + or spaces (e.g., 919876543210)
+    ownerName: ['muzan kibutsuji'], // Owner names corresponding to ownerNumber array
+    
     // Bot Configuration
     botName: 'Topai',
     prefix: '.',
     sessionName: 'session',
     sessionID: process.env.SESSION_ID || '',
-    newsletterJid: '120363161513685998@newsletter',
-    updateZipUrl: 'https://github.com/adewalen06-alt/Whatapp_bot/raw/main/topai-bot.zip',
-
+    newsletterJid: '120363161513685998@newsletter', // Newsletter JID for menu forwarding
+    updateZipUrl: 'https://github.com/mruniquehacker/KnightBot-Mini/archive/refs/heads/main.zip', // URL to latest code zip for .update command
+    
     // Sticker Configuration
     packname: 'TOPAI',
-
+    
     // Bot Behavior
-    selfMode: false, // false = PUBLIC (everyone can use), true = PRIVATE (owner only)
+    selfMode: false, // Public mode - everyone can use commands
     autoRead: false,
     autoTyping: false,
     autoBio: false,
     autoSticker: false,
     autoReact: true,
-    autoReactMode: 'bot',
+    autoReactMode: 'bot', // set bot or all via cmd
     autoDownload: false,
-
+    
     // Group Settings Defaults
     defaultGroupSettings: {
       antilink: true,
-      antilinkAction: 'warn',
+      antilinkAction: 'warn', // 'delete', 'kick', 'warn'
       antitag: false,
       antitagAction: 'delete',
-      antiall: false,
+      antiall: false, // Owner only - blocks all messages from non-admins
       antiviewonce: false,
       antibot: false,
-      anticall: false,
-      antigroupmention: false,
-      antigroupmentionAction: 'delete',
+      anticall: false, // Anti-call feature
+      antigroupmention: false, // Anti-group mention feature
+      antigroupmentionAction: 'delete', // 'delete', 'kick'
       welcome: true,
       welcomeMessage: '╭╼━≪•𝙽𝙴𝚆 𝙼𝙴𝙼𝙱𝙴𝚁•≫━╾╮\n┃𝚆𝙴𝙻𝙲𝙾𝙼𝙴: @user 👋\n┃Member count: #memberCount\n┃𝚃𝙸𝙼𝙴: time⏰\n╰━━━━━━━━━━━━━━━╯\n\n*@user* Welcome to *@group*! 🎉\n*Group 𝙳𝙴𝚂𝙲𝚁𝙸𝙿𝚃𝙸𝙾𝙽*\ngroupDesc\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ botName*',
       goodbye: true,
-      goodbyeMessage: 'Goodbye @user 👋 We will miss you!',
+      goodbyeMessage: 'Goodbye @user 👋 We will never miss you!',
       antiSpam: false,
       antidelete: false,
       nsfw: false,
       detect: false,
       chatbot: false,
-      autosticker: false
+      autosticker: false // Auto-convert images/videos to stickers
     },
-
-    // API Keys
+    
+    // API Keys (add your own)
     apiKeys: {
+      // Add API keys here if needed
       openai: '',
       deepai: '',
       remove_bg: ''
     },
-
+    
     // Message Configuration
     messages: {
       wait: '⏳ Please wait...',
@@ -71,17 +73,18 @@ module.exports = {
       botAdminNeeded: '🤖 Bot needs to be admin to execute this command!',
       invalidCommand: '❓ Invalid command! Type .menu for help'
     },
-
+    
     // Timezone
-    timezone: 'Africa/Lagos',
-
+    timezone: 'Asia/Kolkata',
+    
     // Limits
     maxWarnings: 3,
-
-    // Social Links
+    
+    // Social Links (optional)
     social: {
-      github: 'https://github.com/adewalen06-alt/Whatapp_bot',
-      instagram: '',
-      youtube: ''
+      github: 'https://github.com/mruniquehacker',
+      instagram: 'https://instagram.com/yourusername',
+      youtube: 'http://youtube.com/@mr_unique_hacker'
     }
 };
+  

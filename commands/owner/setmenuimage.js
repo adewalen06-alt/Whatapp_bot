@@ -71,8 +71,8 @@ module.exports = {
           .toBuffer();
       }
       
-      // Save to utils/bot_image.jpg
-      const imagePath = path.join(__dirname, '../../utils/bot_image.jpg');
+      // Save to utils/bot_image.png
+      const imagePath = path.join(__dirname, '../../utils/bot_image.png');
       
       // Delete old image if exists
       if (fs.existsSync(imagePath)) {

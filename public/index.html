@@ -31,69 +31,246 @@
       padding: 24px 16px;
     }
 
-    header { text-align: center; margin-bottom: 36px; }
-    header .logo { font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; color: var(--green); }
+    /* ── PIN Lock Overlay ── */
+    #pin-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 24px;
+    }
+
+    #pin-overlay .logo {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+
+    #pin-overlay .logo span { color: var(--text); }
+
+    #pin-overlay p.subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    #pin-overlay .pin-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    #pin-overlay h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text);
+      text-align: center;
+    }
+
+    #pin-overlay .lock-icon {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    #pin-input {
+      width: 100%;
+      padding: 13px 16px;
+      background: #0d1a10;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1.1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+
+    #pin-input:focus { border-color: var(--green); }
+    #pin-input::placeholder { letter-spacing: 0; color: var(--muted); }
+
+    #pin-error {
+      margin-top: 10px;
+      color: var(--error);
+      font-size: 0.82rem;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    #pin-submit {
+      width: 100%;
+      margin-top: 16px;
+      padding: 13px;
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    #pin-submit:hover { opacity: 0.9; }
+    #pin-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Main App ── */
+    #app { display: none; width: 100%; max-width: 480px; flex-direction: column; align-items: center; }
+    #app.show { display: flex; }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    header .logo {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--green);
+    }
+
     header .logo span { color: var(--text); }
-    header p { margin-top: 6px; color: var(--muted); font-size: 0.95rem; }
+
+    header p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
 
     .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #0d2014; border: 1px solid var(--border);
-      border-radius: 99px; padding: 4px 12px;
-      font-size: 0.78rem; color: var(--green); margin-top: 10px;
-    }
-    .badge .dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--green); animation: pulse 2s infinite;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #0d2014;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: var(--green);
+      margin-top: 10px;
     }
 
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
 
     .main-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 20px; padding: 32px;
-      width: 100%; max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
     }
 
-    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text); }
-    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
 
     input[type="text"] {
-      width: 100%; padding: 13px 16px;
-      background: #0d1a10; border: 1px solid var(--border);
-      border-radius: 12px; color: var(--text); font-size: 1rem;
-      outline: none; transition: border-color 0.2s;
+      width: 100%;
+      padding: 13px 16px;
+      background: #0d1a10;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
+
     input[type="text"]:focus { border-color: var(--green); }
     input[type="text"]::placeholder { color: var(--muted); }
 
-    .method-tabs { display: flex; gap: 8px; margin: 16px 0; }
-    .tab-btn {
-      flex: 1; padding: 10px; border-radius: 10px;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--muted); font-size: 0.88rem; cursor: pointer; transition: all 0.2s;
+    .method-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 16px 0;
     }
-    .tab-btn.active { background: #0d2014; border-color: var(--green); color: var(--green); }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #0d2014;
+      border-color: var(--green);
+      color: var(--green);
+    }
 
     .connect-btn {
-      width: 100%; margin-top: 20px; padding: 14px;
-      background: var(--green); color: #000; font-weight: 700;
-      font-size: 0.95rem; border: none; border-radius: 12px;
-      cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
     }
+
     .connect-btn:hover { opacity: 0.9; }
     .connect-btn:active { transform: scale(0.98); }
     .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .result-box { margin-top: 24px; display: none; }
+    .result-box {
+      margin-top: 24px;
+      display: none;
+    }
+
     .result-box.show { display: block; }
 
     .status-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 14px; border-radius: 99px;
-      font-size: 0.85rem; font-weight: 600; margin-bottom: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 16px;
     }
+
     .status-connecting { background: #1a1a00; color: var(--warn); border: 1px solid #3a3a00; }
     .status-qr { background: #001a1a; color: #00e5ff; border: 1px solid #003a3a; }
     .status-pair { background: #001a0f; color: var(--green); border: 1px solid #003a1a; }
@@ -101,128 +278,307 @@
     .status-error { background: #1a0000; color: var(--error); border: 1px solid #3a0000; }
 
     .pair-code-display {
-      background: #0a1f10; border: 1px solid var(--green-dark);
-      border-radius: 14px; padding: 20px; text-align: center;
-    }
-    .pair-code-display p { color: var(--muted); font-size: 0.82rem; margin-bottom: 12px; }
-    .pair-code {
-      font-size: 2.2rem; font-weight: 800; letter-spacing: 8px;
-      color: var(--green); font-family: 'Courier New', monospace;
+      background: #0a1f10;
+      border: 1px solid var(--green-dark);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
     }
 
-    .refresh-code-btn {
-      margin-top: 12px; padding: 8px 20px;
-      background: transparent; border: 1px solid var(--green-dark);
-      color: var(--green); border-radius: 8px; cursor: pointer;
-      font-size: 0.82rem; transition: all 0.2s;
+    .pair-code-display p {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 12px;
     }
-    .refresh-code-btn:hover { background: #0d2014; }
-    .refresh-code-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .pair-code {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: var(--green);
+      font-family: 'Courier New', monospace;
+    }
 
     .pair-steps {
-      margin-top: 14px; padding: 12px 14px;
-      background: #0d1a10; border-radius: 10px;
-      font-size: 0.8rem; color: var(--muted); line-height: 1.7; text-align: left;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #0d1a10;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.7;
+      text-align: left;
     }
+
     .pair-steps strong { color: var(--text); }
 
     .qr-display { text-align: center; }
-    .qr-display img {
-      width: 220px; height: 220px; border-radius: 12px;
-      border: 3px solid var(--green-dark); background: white; padding: 4px;
-    }
-    .qr-display p { margin-top: 12px; color: var(--muted); font-size: 0.82rem; }
 
-    .connected-display { text-align: center; padding: 20px; }
+    .qr-display img {
+      width: 220px;
+      height: 220px;
+      border-radius: 12px;
+      border: 3px solid var(--green-dark);
+      background: white;
+      padding: 4px;
+    }
+
+    .qr-display p {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .connected-display {
+      text-align: center;
+      padding: 20px;
+    }
+
     .connected-display .check { font-size: 3rem; }
-    .connected-display p { color: var(--muted); font-size: 0.88rem; margin-top: 8px; }
-    .connected-display .number { font-size: 1.1rem; font-weight: 700; color: var(--green); margin-top: 4px; }
+
+    .connected-display p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 8px;
+    }
+
+    .connected-display .number {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-top: 4px;
+    }
 
     .disconnect-btn {
-      margin-top: 16px; padding: 10px 24px;
-      background: transparent; border: 1px solid var(--error);
-      color: var(--error); border-radius: 10px; cursor: pointer;
-      font-size: 0.85rem; transition: all 0.2s;
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--error);
+      color: var(--error);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
     }
+
     .disconnect-btn:hover { background: #1a0000; }
 
-    .sessions-section { width: 100%; max-width: 480px; margin-top: 24px; }
+    .sessions-section {
+      width: 100%;
+      margin-top: 24px;
+    }
+
     .sessions-section h3 {
-      font-size: 0.9rem; color: var(--muted); margin-bottom: 12px;
-      text-transform: uppercase; letter-spacing: 1px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
+
     .session-item {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px 16px;
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
     }
+
     .session-item .session-phone { font-weight: 600; font-size: 0.95rem; }
-    .session-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    .session-status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
     .dot-connected { background: var(--green); }
     .dot-connecting { background: var(--warn); animation: pulse 2s infinite; }
     .dot-error { background: var(--error); }
+
     .session-item .session-status-text { font-size: 0.8rem; color: var(--muted); }
+
     .session-item button {
-      background: transparent; border: 1px solid var(--border);
-      color: var(--muted); padding: 6px 12px; border-radius: 8px;
-      cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
     }
+
     .session-item button:hover { border-color: var(--error); color: var(--error); }
 
     .spinner {
-      display: inline-block; width: 16px; height: 16px;
-      border: 2px solid var(--border); border-top-color: var(--green);
-      border-radius: 50%; animation: spin 0.8s linear infinite;
-      vertical-align: middle; margin-right: 6px;
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
     }
 
-    footer { margin-top: 40px; color: var(--muted); font-size: 0.78rem; text-align: center; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
-<header>
+<!-- ── PIN Lock Overlay ── -->
+<div id="pin-overlay">
   <div class="logo">Topai<span>Bot</span></div>
-  <p>Multi-User WhatsApp Bot — Connect any number</p>
-  <div class="badge">
-    <span class="dot"></span>
-    <span id="server-status">Server Online</span>
-  </div>
-</header>
-
-<div class="main-card">
-  <h2>Connect WhatsApp Number</h2>
-
-  <label for="phone-input">Phone Number (with country code)</label>
-  <input type="text" id="phone-input" placeholder="e.g. 2349137250390" maxlength="20" />
-
-  <div class="method-tabs">
-    <button class="tab-btn active" data-method="pair">📲 Pair Code</button>
-    <button class="tab-btn" data-method="qr">📷 QR Code</button>
-  </div>
-
-  <button class="connect-btn" id="connect-btn">Connect Number</button>
-
-  <div class="result-box" id="result-box">
-    <div id="result-content"></div>
+  <p class="subtitle">Admin Access Required</p>
+  <div class="pin-card">
+    <div class="lock-icon">🔐</div>
+    <h2>Enter Admin PIN</h2>
+    <input
+      type="password"
+      id="pin-input"
+      placeholder="Enter PIN"
+      maxlength="20"
+      autocomplete="off"
+    />
+    <div id="pin-error"></div>
+    <button id="pin-submit">Unlock</button>
   </div>
 </div>
 
-<div class="sessions-section">
-  <h3>Active Sessions (<span id="session-count">0</span>)</h3>
-  <div id="sessions-list"></div>
-</div>
+<!-- ── Main App (shown after PIN) ── -->
+<div id="app">
+  <header>
+    <div class="logo">Topai<span>Bot</span></div>
+    <p>Multi-User WhatsApp Bot — Connect any number</p>
+    <div class="badge">
+      <span class="dot"></span>
+      <span id="server-status">Server Online</span>
+    </div>
+  </header>
 
-<footer>
-  Topai WhatsApp Bot · Multi-User Edition · Powered by Baileys
-</footer>
+  <div class="main-card">
+    <h2>Connect WhatsApp Number</h2>
+
+    <label for="phone-input">Phone Number (with country code)</label>
+    <input
+      type="text"
+      id="phone-input"
+      placeholder="e.g. 2347026096039"
+      maxlength="20"
+    />
+
+    <div class="method-tabs">
+      <button class="tab-btn active" data-method="pair">📲 Pair Code</button>
+      <button class="tab-btn" data-method="qr">📷 QR Code</button>
+    </div>
+
+    <button class="connect-btn" id="connect-btn">Connect Number</button>
+
+    <div class="result-box" id="result-box">
+      <div id="result-content"></div>
+    </div>
+  </div>
+
+  <div class="sessions-section">
+    <h3>Active Sessions (<span id="session-count">0</span>)</h3>
+    <div id="sessions-list"></div>
+  </div>
+
+  <footer>
+    Topai WhatsApp Bot · Multi-User Edition · Powered by Baileys
+  </footer>
+</div>
 
 <script>
+  const PIN_KEY = 'topai_admin_pin';
+  const STORAGE_KEY = 'topai_active_phone';
+
+  let adminPin = sessionStorage.getItem(PIN_KEY) || '';
   let selectedMethod = 'pair';
   let currentPhone = null;
   let eventSource = null;
 
-  // ── Tab switching ──────────────────────────────────────────
+  // ── PIN helpers ──────────────────────────────────────────────────────────────
+  function pinHeaders() {
+    return { 'Content-Type': 'application/json', 'X-Admin-Pin': adminPin };
+  }
+
+  async function unlockApp() {
+    document.getElementById('pin-overlay').style.display = 'none';
+    document.getElementById('app').classList.add('show');
+    loadSessions();
+    restoreSessionOnLoad();
+    setInterval(loadSessions, 10000);
+  }
+
+  // Check if stored PIN is still valid on load
+  async function checkStoredPin() {
+    if (!adminPin) return;
+    try {
+      const res = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: adminPin })
+      });
+      if (res.ok) { unlockApp(); return; }
+    } catch (_) {}
+    sessionStorage.removeItem(PIN_KEY);
+    adminPin = '';
+  }
+
+  // PIN submit handler
+  document.getElementById('pin-submit').addEventListener('click', submitPin);
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitPin();
+    document.getElementById('pin-error').textContent = '';
+  });
+
+  async function submitPin() {
+    const input = document.getElementById('pin-input');
+    const btn = document.getElementById('pin-submit');
+    const pin = input.value.trim();
+    if (!pin) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+
+    try {
+      const res = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        adminPin = pin;
+        sessionStorage.setItem(PIN_KEY, pin);
+        unlockApp();
+      } else {
+        document.getElementById('pin-error').textContent = '❌ Wrong PIN. Try again.';
+        input.value = '';
+        input.focus();
+      }
+    } catch (_) {
+      document.getElementById('pin-error').textContent = '❌ Server error. Try again.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+  }
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -231,20 +587,16 @@
     });
   });
 
-  // ── Connect button ─────────────────────────────────────────
+  // ── Connect button ────────────────────────────────────────────────────────────
   document.getElementById('connect-btn').addEventListener('click', async () => {
     const phone = document.getElementById('phone-input').value.replace(/\D/g, '');
     if (!phone || phone.length < 7) {
       alert('Please enter a valid phone number with country code.');
       return;
     }
-    startConnection(phone, selectedMethod);
-  });
 
-  async function startConnection(phone, method) {
     currentPhone = phone;
-    localStorage.setItem('topai_phone', phone);
-    localStorage.setItem('topai_method', method);
+    localStorage.setItem(STORAGE_KEY, phone);
 
     const btn = document.getElementById('connect-btn');
     btn.disabled = true;
@@ -257,9 +609,16 @@
     try {
       const res = await fetch('/api/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, method })
+        headers: pinHeaders(),
+        body: JSON.stringify({ phone, method: selectedMethod })
       });
+
+      if (res.status === 401) {
+        sessionStorage.removeItem(PIN_KEY);
+        location.reload();
+        return;
+      }
+
       const data = await res.json();
 
       if (!data.success && data.error !== 'Already connected') {
@@ -275,9 +634,8 @@
       btn.disabled = false;
       btn.innerHTML = 'Connect Number';
     }
-  }
+  });
 
-  // ── SSE subscription ───────────────────────────────────────
   function subscribeToEvents(phone) {
     if (eventSource) eventSource.close();
     eventSource = new EventSource(`/api/events/${phone}`);
@@ -288,7 +646,6 @@
     eventSource.onerror = () => {};
   }
 
-  // ── Status update handler ──────────────────────────────────
   function handleStatusUpdate(data, phone) {
     const btn = document.getElementById('connect-btn');
 
@@ -300,16 +657,15 @@
           <div class="status-badge status-pair">📲 Enter this code in WhatsApp</div>
           <div class="pair-code-display">
             <p>Pairing Code for +${phone}</p>
-            <div class="pair-code" id="pair-code-text">${data.pairCode}</div>
-            <button class="refresh-code-btn" id="refresh-btn" onclick="refreshCode('${phone}')">🔄 Get New Code</button>
+            <div class="pair-code">${data.pairCode}</div>
             <div class="pair-steps">
               <strong>How to pair:</strong><br>
               1. Open WhatsApp on your phone<br>
               2. Go to <strong>Linked Devices</strong><br>
               3. Tap <strong>Link a Device</strong><br>
               4. Tap <strong>Link with phone number instead</strong><br>
-              5. Enter your number → tap Next<br>
-              6. Type the code above quickly (expires in ~60s)
+              5. Enter: <strong>+${phone}</strong><br>
+              6. Enter the code above when prompted
             </div>
           </div>
         `);
@@ -328,17 +684,18 @@
         break;
 
       case 'connected':
-        localStorage.setItem('topai_phone', phone);
-        showConnected(phone, data.botNumber || phone);
+        localStorage.setItem(STORAGE_KEY, phone);
+        showResult(`
+          <div class="status-badge status-connected">✅ Connected</div>
+          <div class="connected-display">
+            <div class="check">🎉</div>
+            <p>Bot successfully connected as</p>
+            <div class="number">+${data.botNumber || phone}</div>
+            <button class="disconnect-btn" onclick="disconnect('${phone}')">Disconnect</button>
+          </div>
+        `);
         eventSource?.close();
         loadSessions();
-        break;
-
-      case 'awaiting_pair':
-        // Already waiting — check if pairCode exists
-        if (data.pairCode) {
-          handleStatusUpdate({ status: 'pair_code', pairCode: data.pairCode }, phone);
-        }
         break;
 
       case 'reconnecting':
@@ -346,69 +703,26 @@
         break;
 
       case 'logged_out':
-        localStorage.removeItem('topai_phone');
+        localStorage.removeItem(STORAGE_KEY);
         showResult(`<div class="status-badge status-error">🚪 Logged out from WhatsApp</div>`);
         eventSource?.close();
         loadSessions();
         break;
 
       case 'error':
-        showResult(`<div class="status-badge status-error">❌ ${data.error || 'Connection error'}</div>`);
+        showResult(`<div class="status-badge status-error">❌ ${data.error}</div>`);
         btn.disabled = false;
         btn.innerHTML = 'Connect Number';
         break;
 
       case 'disconnected':
-        localStorage.removeItem('topai_phone');
+        localStorage.removeItem(STORAGE_KEY);
         showResult(`<div class="status-badge status-error">🔌 Disconnected</div>`);
         eventSource?.close();
         btn.disabled = false;
         btn.innerHTML = 'Connect Number';
         loadSessions();
         break;
-    }
-  }
-
-  function showConnected(phone, botNumber) {
-    const btn = document.getElementById('connect-btn');
-    btn.disabled = false;
-    btn.innerHTML = 'Connect Number';
-    showResult(`
-      <div class="status-badge status-connected">✅ Connected</div>
-      <div class="connected-display">
-        <div class="check">🎉</div>
-        <p>Bot successfully connected as</p>
-        <div class="number">+${botNumber}</div>
-        <button class="disconnect-btn" onclick="disconnect('${phone}')">Disconnect</button>
-      </div>
-    `);
-  }
-
-  // ── Refresh pair code ──────────────────────────────────────
-  async function refreshCode(phone) {
-    const btn = document.getElementById('refresh-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Getting new code...'; }
-
-    // Disconnect old session and start fresh
-    try { await fetch(`/api/disconnect/${phone}`, { method: 'POST' }); } catch (_) {}
-    await new Promise(r => setTimeout(r, 1000));
-
-    showResult(`<div class="status-badge status-connecting"><span class="spinner"></span> Getting fresh code...</div>`);
-
-    try {
-      const res = await fetch('/api/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, method: 'pair' })
-      });
-      const data = await res.json();
-      if (data.success || data.error === 'Already connected') {
-        subscribeToEvents(phone);
-      } else {
-        showResult(`<div class="status-badge status-error">❌ ${data.error}</div>`);
-      }
-    } catch (err) {
-      showResult(`<div class="status-badge status-error">❌ ${err.message}</div>`);
     }
   }
 
@@ -419,9 +733,14 @@
   }
 
   async function disconnect(phone) {
-    await fetch(`/api/disconnect/${phone}`, { method: 'POST' });
-    localStorage.removeItem('topai_phone');
+    localStorage.removeItem(STORAGE_KEY);
+    const res = await fetch(`/api/disconnect/${phone}`, {
+      method: 'POST',
+      headers: pinHeaders()
+    });
+    if (res.status === 401) { sessionStorage.removeItem(PIN_KEY); location.reload(); return; }
     showResult(`<div class="status-badge status-error">🔌 Disconnected</div>`);
+    currentPhone = null;
     loadSessions();
   }
 
@@ -446,7 +765,8 @@
             <div>
               <div class="session-phone">+${s.phone}</div>
               <div class="session-status-text">
-                <span class="session-status-dot ${dotClass}"></span>${s.status}
+                <span class="session-status-dot ${dotClass}"></span>
+                ${s.status}
               </div>
             </div>
             <button onclick="disconnect('${s.phone}')">Disconnect</button>
@@ -456,67 +776,68 @@
     } catch (_) {}
   }
 
-  // ── AUTO-RESTORE on page refresh ───────────────────────────
-  // This is the key fix: remember the phone and restore state
-  async function restoreSession() {
-    const savedPhone = localStorage.getItem('topai_phone');
+  async function restoreSessionOnLoad() {
+    const savedPhone = localStorage.getItem(STORAGE_KEY);
     if (!savedPhone) return;
-
-    // Pre-fill the phone input
-    document.getElementById('phone-input').value = savedPhone;
-    currentPhone = savedPhone;
 
     try {
       const res = await fetch(`/api/status/${savedPhone}`);
       const data = await res.json();
 
-      if (data.status === 'connected') {
-        // Bot is still running — show connected state immediately
-        showConnected(savedPhone, savedPhone);
-        subscribeToEvents(savedPhone);
+      if (data.status === 'not_found') {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
 
+      currentPhone = savedPhone;
+      document.getElementById('phone-input').value = savedPhone;
+
+      if (data.status === 'connected') {
+        showResult(`
+          <div class="status-badge status-connected">✅ Connected</div>
+          <div class="connected-display">
+            <div class="check">🎉</div>
+            <p>Bot is running as</p>
+            <div class="number">+${savedPhone}</div>
+            <button class="disconnect-btn" onclick="disconnect('${savedPhone}')">Disconnect</button>
+          </div>
+        `);
+      } else if (data.status === 'reconnecting') {
+        showResult(`<div class="status-badge status-connecting"><span class="spinner"></span> Reconnecting...</div>`);
+        subscribeToEvents(savedPhone);
+      } else if (data.status === 'awaiting_qr' && data.qrBase64) {
+        showResult(`
+          <div class="status-badge status-qr">📷 Scan QR Code</div>
+          <div class="qr-display">
+            <img src="${data.qrBase64}" alt="QR Code" />
+            <p>Open WhatsApp → Linked Devices → Link a Device → Scan this QR</p>
+          </div>
+        `);
+        subscribeToEvents(savedPhone);
       } else if (data.status === 'awaiting_pair' && data.pairCode) {
-        // Still waiting for pair — show the code
         showResult(`
           <div class="status-badge status-pair">📲 Enter this code in WhatsApp</div>
           <div class="pair-code-display">
             <p>Pairing Code for +${savedPhone}</p>
             <div class="pair-code">${data.pairCode}</div>
-            <button class="refresh-code-btn" id="refresh-btn" onclick="refreshCode('${savedPhone}')">🔄 Get New Code</button>
             <div class="pair-steps">
               <strong>How to pair:</strong><br>
-              1. Open WhatsApp → <strong>Linked Devices</strong><br>
-              2. Tap <strong>Link a Device</strong><br>
-              3. Tap <strong>Link with phone number instead</strong><br>
-              4. Enter number → type the code above
+              1. Open WhatsApp → Linked Devices → Link a Device<br>
+              2. Tap <strong>Link with phone number instead</strong><br>
+              3. Enter: <strong>+${savedPhone}</strong><br>
+              4. Enter the code above when prompted
             </div>
           </div>
         `);
         subscribeToEvents(savedPhone);
-
-      } else if (data.status === 'connecting' || data.status === 'reconnecting') {
-        showResult(`<div class="status-badge status-connecting"><span class="spinner"></span> Reconnecting...</div>`);
+      } else {
         subscribeToEvents(savedPhone);
-
-      } else if (data.status === 'not_found') {
-        // Server restarted — auto-reconnect silently
-        const savedMethod = localStorage.getItem('topai_method') || 'pair';
-        showResult(`<div class="status-badge status-connecting"><span class="spinner"></span> Restoring session...</div>`);
-        const r = await fetch('/api/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: savedPhone, method: savedMethod })
-        });
-        const d = await r.json();
-        if (d.success) subscribeToEvents(savedPhone);
       }
     } catch (_) {}
   }
 
-  // Run on page load
-  restoreSession();
-  loadSessions();
-  setInterval(loadSessions, 10000);
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+  checkStoredPin();
 </script>
 </body>
 </html>

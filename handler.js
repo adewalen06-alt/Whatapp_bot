@@ -645,20 +645,6 @@ const handleMessage = async (sock, msg) => {
       }
     }
     
-    // Anti-group mention protection (check BEFORE prefix check, as these are non-command messages)
-    if (isGroup) {
-      // Debug logging to confirm we're trying to call the handler
-      const groupSettings = database.getGroupSettings(from);
-      if (groupSettings.antigroupmention) {
-        // Debug log removed
-      }
-      try {
-        await handleAntigroupmention(sock, msg, groupMetadata);
-      } catch (error) {
-        console.error('Error in antigroupmention handler:', error);
-      }
-    }
-    
     // AutoSticker feature - convert images/videos to stickers automatically
     if (isGroup) { // Process all messages in groups (including bot's own messages)
       const groupSettings = database.getGroupSettings(from);

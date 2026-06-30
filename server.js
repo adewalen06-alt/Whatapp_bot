@@ -27,10 +27,27 @@ const handler = require('./handler');
 
 const app = express();
 const PORT = process.env.PORT || 7860;
+const ADMIN_PIN = process.env.ADMIN_PIN || 'topai1234';
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ─── PIN Verification Middleware ──────────────────────────────────────────────
+function requirePin(req, res, next) {
+  const pin = req.headers['x-admin-pin'];
+  if (!pin || pin !== ADMIN_PIN) {
+    return res.status(401).json({ error: 'Invalid PIN. Access denied.' });
+  }
+  next();
+}
+
+// PIN verify endpoint (used by UI to check PIN)
+app.post('/api/verify-pin', (req, res) => {
+  const { pin } = req.body;
+  if (pin === ADMIN_PIN) return res.json({ ok: true });
+  res.status(401).json({ ok: false, error: 'Wrong PIN' });
+});
 
 // ─── Session Store ──────────────────────────────────────────────────────────
 // Map<phoneNumber, { sock, status, qr, pairCode, qrBase64, reconnectTimer }>
@@ -242,7 +259,7 @@ app.get('/api/sessions', (req, res) => {
 });
 
 // Connect a new phone
-app.post('/api/connect', async (req, res) => {
+app.post('/api/connect', requirePin, async (req, res) => {
   const { phone, method } = req.body;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });
 
@@ -267,7 +284,7 @@ app.get('/api/status/:phone', (req, res) => {
 });
 
 // Disconnect a session
-app.post('/api/disconnect/:phone', async (req, res) => {
+app.post('/api/disconnect/:phone', requirePin, async (req, res) => {
   const phone = req.params.phone.replace(/\D/g, '');
   const data = sessions.get(phone);
   if (!data) return res.json({ success: false, error: 'Session not found' });

@@ -42,10 +42,18 @@ module.exports = {
       });
 
       // 3. Extract and Clean Numbers
-      // Filter out invalid entries and format cleanly
+      // Handle both regular JIDs and newer LID JIDs
       const numbers = participants
-        .map(p => p.id.split('@')[0]) // Remove @s.whatsapp.net
-        .filter(num => /^\d+$/.test(num)); // Ensure only digits remain
+        .map(p => {
+          // Try phoneNumber property first (newer Baileys with LID support)
+          if (p.phoneNumber) {
+            return p.phoneNumber.split('@')[0];
+          }
+          // Fall back to id - filter out LID format entries
+          const rawId = (p.id || '').split('@')[0];
+          return /^\d{7,}$/.test(rawId) ? rawId : null;
+        })
+        .filter(num => num !== null); // Remove nulls (LID entries without phone)
 
       const total = numbers.length;
 
