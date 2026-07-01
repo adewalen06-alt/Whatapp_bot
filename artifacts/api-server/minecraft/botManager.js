@@ -44,7 +44,7 @@ function _spawnBot(inst) {
       username,
       version: config.version || false,
       auth: config.auth || 'offline',
-      checkTimeoutInterval: 30000,
+      checkTimeoutInterval: 120000, // 2 min — tolerates slow/sleeping servers (e.g. Aternos)
       keepAlive: true,
       hideErrors: false
     });
@@ -80,6 +80,7 @@ function _spawnBot(inst) {
   bot.once('spawn', () => {
     clearTimeout(spawnTimeout);
     inst.status = 'connected';
+    inst._wasEverConnected = true; // used to distinguish network blips from auth rejections
     inst.reconnectAttempts = 0;
     inst._tickCount = 0;
 
@@ -123,55 +124,82 @@ function _spawnBot(inst) {
 
   bot.on('kicked', (reason) => {
     clearTimeout(spawnTimeout);
-    let reasonStr;
-    try {
-      const parsed = typeof reason === 'string' ? JSON.parse(reason) : reason;
-      reasonStr = parsed?.text || parsed?.extra?.map(e => e.text || e).join('') || JSON.stringify(parsed);
-    } catch (_) {
-      reasonStr = String(reason);
-    }
-
-    log(inst.serverId, `⚡ Kicked: ${reasonStr}`, 'warn');
     inst.human?.stopAll();
 
-    const isBanned = BAN_KEYWORDS.some(kw => reasonStr.toLowerCase().includes(kw));
-    if (isBanned && accountList.length > 1) {
-      inst.currentAccountIndex = (inst.currentAccountIndex + 1) % accountList.length;
-      const nextUser = accountList[inst.currentAccountIndex];
-      log(inst.serverId, `🔄 Ban detected! Switching account → ${nextUser}`, 'warn');
-      broadcast(inst.serverId, { event: 'banned', nextAccount: nextUser });
+    // Parse Minecraft JSON kick reason
+    let reasonStr = String(reason || '');
+    try {
+      const parsed = typeof reason === 'string' ? JSON.parse(reason) : reason;
+      const extractText = (obj) => {
+        if (!obj) return '';
+        if (typeof obj === 'string') return obj;
+        let t = obj.text || obj.translate || '';
+        if (obj.extra) t += obj.extra.map(extractText).join('');
+        if (obj.with) t += ' ' + obj.with.map(extractText).join(', ');
+        return t.trim();
+      };
+      reasonStr = extractText(parsed) || JSON.stringify(parsed);
+    } catch (_) {}
+
+    const isEmpty = !reasonStr || reasonStr === '{}' || reasonStr === '{"text":""}';
+    if (isEmpty) {
+      // Aternos / free-host servers kick bots when the server goes to sleep
+      inst._sleepKicks = (inst._sleepKicks || 0) + 1;
+      log(inst.serverId, `⚡ Kicked — server may be sleeping (Aternos/free host). Attempt #${inst._sleepKicks}`, 'warn');
+      if (inst._sleepKicks >= 3) {
+        log(inst.serverId, `😴 Server keeps sleeping — will wait 2 min before next reconnect attempt`, 'warn');
+        inst._longSleepWait = true;
+      }
+    } else {
+      inst._sleepKicks = 0;
+      inst._longSleepWait = false;
+      log(inst.serverId, `⚡ Kicked: ${reasonStr}`, 'warn');
+
+      const isBanned = BAN_KEYWORDS.some(kw => reasonStr.toLowerCase().includes(kw));
+      if (isBanned && accountList.length > 1) {
+        inst.currentAccountIndex = (inst.currentAccountIndex + 1) % accountList.length;
+        const nextUser = accountList[inst.currentAccountIndex];
+        log(inst.serverId, `🔄 Ban detected — switching account → ${nextUser}`, 'warn');
+        broadcast(inst.serverId, { event: 'banned', nextAccount: nextUser });
+      }
     }
   });
 
   bot.on('error', (err) => {
     clearTimeout(spawnTimeout);
-    const msg = err.message || String(err);
-    let stopReconnect = false;
+    // Safely extract message — err can be Error, string, or object
+    const msg = (err?.message || err?.code || (typeof err === 'string' ? err : '') || 'unknown error').trim();
 
     if (msg.includes('ECONNREFUSED')) {
       log(inst.serverId, `❌ Server refused connection — is the server online? Check host/port.`, 'error');
     } else if (msg.includes('ENOTFOUND') || msg.includes('ENOENT')) {
       log(inst.serverId, `❌ Server address not found — check the hostname spelling.`, 'error');
-      stopReconnect = true; // DNS won't resolve — no point retrying
-    } else if (msg.includes('ETIMEDOUT')) {
-      log(inst.serverId, `❌ Connection timed out — server may be offline or behind a firewall.`, 'error');
+      inst.autoReconnect = false;
+      inst.status = 'error';
+      broadcast(inst.serverId, { event: 'status', status: 'error', error: msg });
+      log(inst.serverId, `🛑 Reconnect stopped — fix the hostname and try again.`, 'warn');
+      return;
+    } else if (msg.includes('ETIMEDOUT') || msg.includes('timed out')) {
+      log(inst.serverId, `❌ Connection timed out — server may be sleeping or offline.`, 'error');
     } else if (msg.includes('ECONNRESET')) {
-      log(inst.serverId, `❌ Connection reset by server — likely causes:`, 'error');
-      log(inst.serverId, `   • Server is online-mode → switch Auth Mode to "Microsoft"`, 'error');
-      log(inst.serverId, `   • Your username is not whitelisted on this server`, 'error');
-      log(inst.serverId, `   • Version mismatch — try setting MC Version manually`, 'error');
-      stopReconnect = true; // Server is actively rejecting us — stop reconnecting
-    } else {
+      if (!inst._wasEverConnected) {
+        // Never connected = server is rejecting our auth/version
+        log(inst.serverId, `❌ Server reset connection — likely causes:`, 'error');
+        log(inst.serverId, `   • Server is online-mode → switch Auth Mode to "Microsoft"`, 'error');
+        log(inst.serverId, `   • Username not whitelisted on this server`, 'error');
+        log(inst.serverId, `   • MC Version mismatch — try setting version manually (e.g. 1.21.1)`, 'error');
+        inst.autoReconnect = false;
+        inst.status = 'error';
+        broadcast(inst.serverId, { event: 'status', status: 'error', error: msg });
+        log(inst.serverId, `🛑 Reconnect stopped — fix the issue and try again.`, 'warn');
+        return;
+      } else {
+        log(inst.serverId, `❌ Connection dropped (ECONNRESET) — will reconnect...`, 'error');
+      }
+    } else if (msg) {
       log(inst.serverId, `❌ Error: ${msg}`, 'error');
     }
-
-    inst.status = 'error';
-    broadcast(inst.serverId, { event: 'status', status: 'error', error: msg });
-
-    if (stopReconnect) {
-      inst.autoReconnect = false;
-      log(inst.serverId, `🛑 Auto-reconnect disabled — fix the issue above and reconnect manually.`, 'warn');
-    }
+    // For recoverable errors, don't change status — let end event handle reconnect
   });
 
   bot.on('end', (reason) => {
@@ -180,34 +208,44 @@ function _spawnBot(inst) {
     const wasConnected = inst.status === 'connected';
     inst.status = 'disconnected';
 
-    // socketClosed before spawn = server rejected us during handshake
-    if (!wasConnected && (reason === 'socketClosed' || reason === 'close')) {
+    if (inst.autoReconnect === false) return; // already handled by error handler
+    if (inst.status === 'error') return;
+
+    // socketClosed / close BEFORE ever spawning = server is rejecting us
+    if (!inst._wasEverConnected && (reason === 'socketClosed' || reason === 'close')) {
       inst.autoReconnect = false;
       inst.status = 'error';
-      log(inst.serverId, `❌ Server rejected connection during handshake — likely causes:`, 'error');
+      log(inst.serverId, `❌ Server closed connection before login — likely causes:`, 'error');
       log(inst.serverId, `   • Server is online-mode → change Auth Mode to "Microsoft"`, 'error');
-      log(inst.serverId, `   • Your username is not whitelisted on this server`, 'error');
-      log(inst.serverId, `   • MC Version mismatch — set the exact version (e.g. 1.21.1)`, 'error');
-      log(inst.serverId, `🛑 Auto-reconnect stopped. Fix the issue and reconnect manually.`, 'warn');
+      log(inst.serverId, `   • Username not whitelisted on this server`, 'error');
+      log(inst.serverId, `   • MC Version mismatch — try setting it manually (e.g. 1.21.1)`, 'error');
+      log(inst.serverId, `🛑 Reconnect stopped. Fix the issue and reconnect manually.`, 'warn');
       broadcast(inst.serverId, { event: 'status', status: 'error', error: 'Server rejected connection' });
       return;
     }
 
     if (wasConnected) {
       log(inst.serverId, `🔌 Lost connection to server`, 'warn');
+    } else if (reason === 'keepAliveError') {
+      log(inst.serverId, `🔌 Keep-alive timeout — server was unresponsive`, 'warn');
     } else if (reason && reason !== 'socketClosed' && reason !== 'disconnect.quitting') {
       log(inst.serverId, `🔌 Disconnected: ${reason}`, 'warn');
     }
 
-    if (inst.status === 'error') return; // timeout or hard error already handled this
-
     broadcast(inst.serverId, { event: 'status', status: 'disconnected' });
 
     if (inst.autoReconnect !== false) {
-      const delay = Math.min(5000 * Math.pow(1.5, inst.reconnectAttempts || 0), 60000);
+      // Use longer delay if server keeps sleeping (Aternos pattern)
+      let delay;
+      if (inst._longSleepWait) {
+        delay = 120000; // 2 min — let the Aternos server wake up
+        inst._longSleepWait = false;
+      } else {
+        delay = Math.min(5000 * Math.pow(1.5, inst.reconnectAttempts || 0), 60000);
+      }
       inst.reconnectAttempts = (inst.reconnectAttempts || 0) + 1;
       const delaySec = Math.round(delay / 1000);
-      log(inst.serverId, `♻️ Auto-reconnecting in ${delaySec}s (attempt #${inst.reconnectAttempts})...`, 'info');
+      log(inst.serverId, `♻️ Reconnecting in ${delaySec}s (attempt #${inst.reconnectAttempts})...`, 'info');
       broadcast(inst.serverId, { event: 'status', status: 'reconnecting', delaySec });
       inst.reconnectTimer = setTimeout(() => _spawnBot(inst), delay);
     }
