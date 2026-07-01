@@ -60,8 +60,14 @@ function _spawnBot(inst) {
   // ── Spawn timeout ─────────────────────────────────────────────────────────
   const spawnTimeout = setTimeout(() => {
     if (inst.status !== 'connected') {
-      log(inst.serverId, `⏱️ Timed out after 30s — server may be unreachable, wrong version, or online-mode (needs Microsoft auth)`, 'error');
-      broadcast(inst.serverId, { event: 'status', status: 'error', error: 'Connection timed out after 30s' });
+      inst.autoReconnect = false; // stop reconnect loop BEFORE bot.end()
+      inst.status = 'error';
+      log(inst.serverId, `⏱️ Timed out — no response from server after 30s`, 'error');
+      log(inst.serverId, `   • Wrong host/port?`, 'error');
+      log(inst.serverId, `   • Online-mode server requiring Microsoft auth?`, 'error');
+      log(inst.serverId, `   • MC Version mismatch? Try setting it manually (e.g. 1.21.1)`, 'error');
+      log(inst.serverId, `🛑 Reconnect stopped. Fix the issue and try again.`, 'warn');
+      broadcast(inst.serverId, { event: 'status', status: 'error', error: 'Timed out after 30s' });
       try { bot.end(); } catch (_) {}
     }
   }, SPAWN_TIMEOUT_MS);
@@ -192,6 +198,8 @@ function _spawnBot(inst) {
     } else if (reason && reason !== 'socketClosed' && reason !== 'disconnect.quitting') {
       log(inst.serverId, `🔌 Disconnected: ${reason}`, 'warn');
     }
+
+    if (inst.status === 'error') return; // timeout or hard error already handled this
 
     broadcast(inst.serverId, { event: 'status', status: 'disconnected' });
 
