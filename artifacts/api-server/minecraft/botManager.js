@@ -174,10 +174,23 @@ function _spawnBot(inst) {
     const wasConnected = inst.status === 'connected';
     inst.status = 'disconnected';
 
-    if (reason && reason !== 'socketClosed' && reason !== 'disconnect.quitting') {
-      log(inst.serverId, `🔌 Disconnected: ${reason}`, 'warn');
-    } else if (wasConnected) {
+    // socketClosed before spawn = server rejected us during handshake
+    if (!wasConnected && (reason === 'socketClosed' || reason === 'close')) {
+      inst.autoReconnect = false;
+      inst.status = 'error';
+      log(inst.serverId, `❌ Server rejected connection during handshake — likely causes:`, 'error');
+      log(inst.serverId, `   • Server is online-mode → change Auth Mode to "Microsoft"`, 'error');
+      log(inst.serverId, `   • Your username is not whitelisted on this server`, 'error');
+      log(inst.serverId, `   • MC Version mismatch — set the exact version (e.g. 1.21.1)`, 'error');
+      log(inst.serverId, `🛑 Auto-reconnect stopped. Fix the issue and reconnect manually.`, 'warn');
+      broadcast(inst.serverId, { event: 'status', status: 'error', error: 'Server rejected connection' });
+      return;
+    }
+
+    if (wasConnected) {
       log(inst.serverId, `🔌 Lost connection to server`, 'warn');
+    } else if (reason && reason !== 'socketClosed' && reason !== 'disconnect.quitting') {
+      log(inst.serverId, `🔌 Disconnected: ${reason}`, 'warn');
     }
 
     broadcast(inst.serverId, { event: 'status', status: 'disconnected' });
