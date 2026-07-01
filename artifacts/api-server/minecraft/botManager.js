@@ -140,17 +140,32 @@ function _spawnBot(inst) {
   bot.on('error', (err) => {
     clearTimeout(spawnTimeout);
     const msg = err.message || String(err);
+    let stopReconnect = false;
+
     if (msg.includes('ECONNREFUSED')) {
       log(inst.serverId, `❌ Server refused connection — is the server online? Check host/port.`, 'error');
     } else if (msg.includes('ENOTFOUND') || msg.includes('ENOENT')) {
-      log(inst.serverId, `❌ Server address not found — check the hostname.`, 'error');
+      log(inst.serverId, `❌ Server address not found — check the hostname spelling.`, 'error');
+      stopReconnect = true; // DNS won't resolve — no point retrying
     } else if (msg.includes('ETIMEDOUT')) {
       log(inst.serverId, `❌ Connection timed out — server may be offline or behind a firewall.`, 'error');
+    } else if (msg.includes('ECONNRESET')) {
+      log(inst.serverId, `❌ Connection reset by server — likely causes:`, 'error');
+      log(inst.serverId, `   • Server is online-mode → switch Auth Mode to "Microsoft"`, 'error');
+      log(inst.serverId, `   • Your username is not whitelisted on this server`, 'error');
+      log(inst.serverId, `   • Version mismatch — try setting MC Version manually`, 'error');
+      stopReconnect = true; // Server is actively rejecting us — stop reconnecting
     } else {
       log(inst.serverId, `❌ Error: ${msg}`, 'error');
     }
+
     inst.status = 'error';
     broadcast(inst.serverId, { event: 'status', status: 'error', error: msg });
+
+    if (stopReconnect) {
+      inst.autoReconnect = false;
+      log(inst.serverId, `🛑 Auto-reconnect disabled — fix the issue above and reconnect manually.`, 'warn');
+    }
   });
 
   bot.on('end', (reason) => {
