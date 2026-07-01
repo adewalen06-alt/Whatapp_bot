@@ -126,18 +126,33 @@ function _spawnBot(inst) {
     clearTimeout(spawnTimeout);
     inst.human?.stopAll();
 
-    // Parse Minecraft JSON kick reason
+    // Parse Minecraft JSON kick reason (handles chat JSON + NBT compound format)
     let reasonStr = String(reason || '');
     try {
       const parsed = typeof reason === 'string' ? JSON.parse(reason) : reason;
+
+      // Recursively extract text from chat JSON or prismarine-nbt compound
       const extractText = (obj) => {
         if (!obj) return '';
         if (typeof obj === 'string') return obj;
+        // prismarine-nbt compound: { type: 'compound', value: { text: { type:'string', value:'...' }, ... } }
+        if (obj.type === 'compound' && obj.value) {
+          const v = obj.value;
+          return extractText(v.text?.value || v.translate?.value || '') +
+            (v.extra?.value ? v.extra.value.map(extractText).join('') : '') +
+            (v.with?.value ? ' ' + v.with.value.map(extractText).join(', ') : '');
+        }
+        // prismarine-nbt primitive: { type: 'string', value: '...' }
+        if (obj.type && obj.value !== undefined && typeof obj.value !== 'object') {
+          return String(obj.value);
+        }
+        // Standard Minecraft chat JSON
         let t = obj.text || obj.translate || '';
         if (obj.extra) t += obj.extra.map(extractText).join('');
         if (obj.with) t += ' ' + obj.with.map(extractText).join(', ');
         return t.trim();
       };
+
       reasonStr = extractText(parsed) || JSON.stringify(parsed);
     } catch (_) {}
 
@@ -154,6 +169,17 @@ function _spawnBot(inst) {
       inst._sleepKicks = 0;
       inst._longSleepWait = false;
       log(inst.serverId, `⚡ Kicked: ${reasonStr}`, 'warn');
+
+      // Common kick hints
+      if (reasonStr.toLowerCase().includes('internal error')) {
+        log(inst.serverId, `💡 Hint: "Internal error" often means MC version mismatch — set the exact version in the form (e.g. 1.20.1, 1.21.1)`, 'info');
+      }
+      if (reasonStr.toLowerCase().includes('outdated') || reasonStr.toLowerCase().includes('update')) {
+        log(inst.serverId, `💡 Hint: Server version mismatch — check what version the server is running and set it in the MC Version field`, 'info');
+      }
+      if (reasonStr.toLowerCase().includes('whitelist')) {
+        log(inst.serverId, `💡 Hint: Ask the server admin to whitelist username: ${username}`, 'info');
+      }
 
       const isBanned = BAN_KEYWORDS.some(kw => reasonStr.toLowerCase().includes(kw));
       if (isBanned && accountList.length > 1) {
