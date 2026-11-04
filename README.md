@@ -85,6 +85,9 @@ For further customization and setup guidance, click the button below:
   <a href="https://bot-hosting.net/?aff=1068419752923508776">
     <img src="https://img.shields.io/badge/Deploy on Panel-28a745?style=for-the-badge" alt="Deploy on Panel"/>
   </a>
+  <a href="https://render.com/deploy?repo=https://github.com/mruniquehacker/Knightbot-MD">
+    <img src="https://img.shields.io/badge/Deploy%20to%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Deploy to Render"/>
+  </a>
 </div>
 
 ### Deploy on VPS
@@ -101,6 +104,100 @@ For further customization and setup guidance, click the button below:
   <img src="https://img.shields.io/badge/Katabump-D6B7D6?style=for-the-badge&logo=server&logoColor=black" alt="Katabump"/>
 </a>
 </div>
+
+---
+
+## 🐳 Docker Deployment
+
+### Quick Start with Docker
+
+```bash
+# Build the image
+docker build -t knightbot .
+
+# Run the container
+docker run -d \
+  --name knightbot \
+  -p 3000:3000 \
+  -v $(pwd)/sessions:/app/sessions \
+  -v $(pwd)/data:/app/data \
+  knightbot
+```
+
+### Docker Compose
+
+Create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  knightbot:
+    build: .
+    container_name: knightbot
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./sessions:/app/sessions
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+```
+
+Run with:
+```bash
+docker-compose up -d
+```
+
+### Deploy to Render (Free)
+
+1. **Fork this repository** to your GitHub account
+
+2. **Create a new Web Service on Render:**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click **New +** → **Web Service**
+   - Connect your forked GitHub repository
+   - Configure:
+     - **Name**: `knightbot` (or your preferred name)
+     - **Environment**: `Docker`
+     - **Region**: Choose closest to you
+     - **Branch**: `main` (or your default branch)
+     - **Dockerfile Path**: `./Dockerfile`
+     - **Port**: `3000`
+
+3. **Add Persistent Disk (for session persistence):**
+   - In the service settings, go to **Disks**
+   - Click **Add Disk**
+   - **Name**: `sessions`
+   - **Mount Path**: `/app/sessions`
+   - **Size**: `1 GB` (or more as needed)
+   - Repeat for `/app/data` if needed
+
+4. **Deploy!**
+   - Click **Create Web Service**
+   - Render will build and deploy your bot
+
+5. **Access the Web GUI:**
+   - Once deployed, open `https://your-app-name.onrender.com`
+   - The Web GUI runs on port 3000
+   - Admin Panel: `https://your-app-name.onrender.com/admin.html`
+
+### Environment Variables for Render
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `3000` |
+| `NODE_ENV` | Node environment | `production` |
+| `SESSION_ID` | Pre-loaded session string (optional) | - |
+
+### Notes for Render Deployment
+
+- **Free tier limitations**: Render free tier spins down after 15 minutes of inactivity. Sessions persist on the attached disk.
+- **WebSocket support**: Render supports WebSockets natively - the Web GUI will work correctly.
+- **Pair Code / QR Code**: Both methods work on Render. For pair code, use the Web GUI at your Render URL.
+- **Default admin password**: `Topai@123456` (change immediately after first login!)
 
 ### Join Us
 

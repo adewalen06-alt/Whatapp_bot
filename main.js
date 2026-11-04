@@ -149,6 +149,8 @@ const { anticallCommand, readState: readAnticallState } = require('./commands/an
 const { pmblockerCommand, readState: readPmBlockerState } = require('./commands/pmblocker');
 const settingsCommand = require('./commands/settings');
 const soraCommand = require('./commands/sora');
+const webguiCommand = require('./commands/webgui');
+const connectedNumbersCommand = require('./commands/connected');
 
 // Global settings
 global.packname = settings.packname;
@@ -522,6 +524,15 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 break;
             case userMessage === '.owner':
                 await ownerCommand(sock, chatId);
+                break;
+            case userMessage === '.webgui':
+                await webguiCommand(sock, chatId);
+                break;
+            case userMessage.startsWith('.connected'):
+                {
+                    const args = userMessage.split(' ').slice(1);
+                    await connectedNumbersCommand(sock, chatId, message, args);
+                }
                 break;
             case userMessage === '.tagall':
                 await tagAllCommand(sock, chatId, senderId, message);

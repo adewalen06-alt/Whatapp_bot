@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knight Bot - Web GUI</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+</head>
+<body>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Knight Bot Web GUI</h1>
+            <p class="page-subtitle">Professional WhatsApp Bot Management Dashboard</p>
+        </div>
+        <div class="page-actions">
+            <a href="/public/admin.html" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Admin Panel
+            </a>
+            <a href="/public/user.html" class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                User Panel
+            </a>
+        </div>
+    </div>
+
+    <main class="content">
+        <div class="grid grid-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-contacts">-</div>
+                    <div class="stat-label">Connected Contacts</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-groups">-</div>
+                    <div class="stat-label">Active Groups</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="stat-numbers">-</div>
+                    <div class="stat-label">Connected Numbers</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-top: 24px;">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Bot Status</h2>
+                    <span class="badge badge-danger" id="bot-status-badge">Disconnected</span>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-2" style="gap: 16px;">
+                        <div>
+                            <div class="label">Bot Name</div>
+                            <div id="bot-name" style="font-weight: 600;">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Phone Number</div>
+                            <div id="bot-phone" style="font-weight: 600;">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Platform</div>
+                            <div id="bot-platform" style="font-weight: 600;">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Uptime</div>
+                            <div id="bot-uptime" style="font-weight: 600;">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Memory Usage</div>
+                            <div id="bot-memory" style="font-weight: 600;">-</div>
+                        </div>
+                        <div>
+                            <div class="label">Version</div>
+                            <div id="bot-version" style="font-weight: 600;">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                        <a href="/public/admin.html" class="btn btn-primary" style="flex: 1; min-width: 180px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            Admin Dashboard
+                        </a>
+                        <a href="/public/user.html" class="btn btn-secondary" style="flex: 1; min-width: 180px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            User Dashboard
+                        </a>
+                        <button class="btn btn-info" id="refresh-btn" style="flex: 1; min-width: 180px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            Refresh Status
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-header">
+                <h2 class="card-title">Features</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-4" style="gap: 16px;">
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Group Management</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">View and manage all connected groups</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #e8f8f0; color: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Contact List</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Browse all WhatsApp contacts</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #fef9e7; color: var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Multi-Number Support</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Manage multiple connected numbers</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #eaf6fd; color: var(--info); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Real-time Monitoring</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Live RAM, CPU, and connection stats</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #fdf0f0; color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Admin Panel</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Secure admin with strong password</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Pair Code / QR</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Easy remote connection</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #ffebe9; color: #ec4899; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Owner Management</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Set and manage bot owners</p>
+                    </div>
+                    <div class="card" style="padding: 20px; text-align: center; background: var(--background);">
+                        <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: #e0f7fa; color: #00bcd4; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">System Controls</h4>
+                        <p style="font-size: 12px; color: var(--text-muted);">Restart, logout, and more</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Knight Bot Web GUI v3.0.8 &copy; 2024 - Built with Node.js & Baileys</p>
+    </footer>
+
+    <script src="/public/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init('index');
+        });
+    </script>
+</body>
+</html>

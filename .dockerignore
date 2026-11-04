@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Sessions & Data
+sessions/
+data/
+tmp/
+temp/
+
+# Build
+dist/
+build/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Documentation
+README.md
+*.md
+
+# Testing
+coverage/
+.nyc_output/
