@@ -72,7 +72,15 @@ setInterval(() => {
 }, 30_000) // check every 30 seconds
 
 let phoneNumber = "911234567890"
-let owner = JSON.parse(fs.readFileSync('./data/owner.json'))
+let owner = []
+try {
+    owner = JSON.parse(fs.readFileSync('./data/owner.json'))
+} catch (e) {
+    console.log('⚠️ owner.json not found, using default')
+    owner = ["910000000000", "917023951514"]
+    // Create default owner.json
+    fs.writeFileSync('./data/owner.json', JSON.stringify(owner))
+}
 
 global.botname = "topai"
 global.themeemoji = "•"

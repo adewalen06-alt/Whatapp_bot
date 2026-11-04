@@ -21,9 +21,22 @@ npm-debug.log*
 .env
 .env.local
 
-# Sessions & Data
+# Sessions & Data (keep initial config files, ignore runtime data)
 sessions/
-data/
+data/*.json
+!data/owner.json
+!data/premium.json
+!data/banned.json
+!data/warnings.json
+!data/autoread.json
+!data/autotyping.json
+!data/autoStatus.json
+!data/antibot.json
+!data/antidelete.json
+!data/connected_numbers.json
+!data/command_config.json
+!data/messageCount.json
+!data/userGroupData.json
 tmp/
 temp/
 
