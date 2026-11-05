@@ -23,14 +23,9 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV NODE_ENV=production
 
-# Copy package.json and install dependencies
-COPY package.json ./
-
-# Install - canvas/sharp are optional so failures won't break the build
-RUN npm install --omit=dev || true
-RUN npm install --omit=dev --ignore-optional 2>/dev/null; \
-    npm install canvas --build-from-source 2>/dev/null || true; \
-    npm install sharp 2>/dev/null || true
+# Copy manifests first so dependency installs can be cached across source changes
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --omit=optional
 
 # Copy all source files
 COPY . .

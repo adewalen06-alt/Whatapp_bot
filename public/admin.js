@@ -6,11 +6,82 @@ const AdminApp = {
 
     async init() {
         this.toastContainer = document.getElementById('toast-container');
+        this.initStarfall();
+        this.initSessionControls();
+        this.initEnvVars();
+        this.initPluginTweaks();
         this.setupAdminEventListeners();
         this.setupTabNavigation();
         await this.checkAuth();
         this.loadData();
         this.setupAutoRefresh();
+    },
+
+
+    initStarfall() {
+        const canvas = document.getElementById('starfall');
+        if (!canvas || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        const resize = () => {
+            const dpr = Math.min(devicePixelRatio || 1, 2);
+            canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            stars = Array.from({length: Math.min(80, Math.floor(innerWidth / 14))}, () => ({x: Math.random()*innerWidth, y: Math.random()*innerHeight, speed: .35 + Math.random()*1.1, size: Math.random()*1.5+.3, alpha: Math.random()*.7+.2}));
+        };
+        const draw = () => {
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (const star of stars) {
+                star.y += star.speed; if (star.y > innerHeight) { star.y = -5; star.x = Math.random()*innerWidth; }
+                ctx.strokeStyle = `rgba(190, 225, 255, ${star.alpha})`;
+                ctx.beginPath(); ctx.moveTo(star.x, star.y); ctx.lineTo(star.x - star.speed*2, star.y - star.speed*7); ctx.stroke();
+            }
+            requestAnimationFrame(draw);
+        };
+        addEventListener('resize', resize, {passive:true}); resize(); draw();
+    },
+
+    initSessionControls() {
+        const customId = document.getElementById('custom-session-id');
+        if (!customId) return;
+        customId.value = localStorage.getItem('sessionCustomId') || customId.value;
+        customId.addEventListener('change', () => localStorage.setItem('sessionCustomId', customId.value.trim()));
+        for (const id of ['session-deployed','session-auto-reconnect','session-remember-password']) {
+            const el = document.getElementById(id); const saved = localStorage.getItem(id);
+            if (saved !== null) el.checked = saved === 'true';
+            el.addEventListener('change', () => localStorage.setItem(id, el.checked));
+        }
+        document.getElementById('refresh-pairing')?.addEventListener('click', () => {
+            const code = Math.floor(100000 + Math.random()*900000).toString().match(/.{3}/g).join(' ');
+            document.getElementById('pairing-code').textContent = code;
+            this.showToast('Pairing code refreshed', 'success');
+        });
+    },
+
+    initEnvVars() {
+        const defaults = [{key:'NODE_ENV', value:'production'}, {key:'WEB_GUI_PORT', value:'3000'}];
+        let vars; try { vars = JSON.parse(localStorage.getItem('dockerEnvVars')) || defaults; } catch { vars = defaults; }
+        const list = document.getElementById('env-vars-list'); if (!list) return;
+        const render = () => { list.innerHTML = vars.map((v,i) => `<div class="env-row"><input class="input env-key" value="${this.escapeHtml(v.key)}" aria-label="Variable name"><input class="input env-value" value="${this.escapeHtml(v.value)}" aria-label="Variable value"><button class="btn btn-secondary btn-sm env-remove" data-index="${i}" type="button">Remove</button></div>`).join(''); };
+        render();
+        document.getElementById('add-env-var')?.addEventListener('click', () => { vars.push({key:'NEW_VARIABLE', value:''}); render(); });
+        list.addEventListener('click', e => { if (e.target.matches('.env-remove')) { vars.splice(Number(e.target.dataset.index),1); render(); } });
+        document.getElementById('save-env-vars')?.addEventListener('click', () => {
+            vars = [...list.querySelectorAll('.env-row')].map(row => ({key:row.querySelector('.env-key').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_'), value:row.querySelector('.env-value').value})).filter(v => v.key);
+            localStorage.setItem('dockerEnvVars', JSON.stringify(vars)); render(); this.showToast('Docker variables saved locally', 'success');
+        });
+    },
+
+    initPluginTweaks() {
+        const welcome = document.getElementById('welcome-tweak'); const goodbye = document.getElementById('goodbye-tweak');
+        if (!welcome || !goodbye) return;
+        welcome.value = localStorage.getItem('welcomeMessage') || 'Welcome to the group! 👋';
+        goodbye.value = localStorage.getItem('goodbyeMessage') || 'Goodbye, we will miss you!';
+        welcome.addEventListener('change', () => localStorage.setItem('welcomeMessage', welcome.value));
+        goodbye.addEventListener('change', () => localStorage.setItem('goodbyeMessage', goodbye.value));
+        const globalToggle = document.getElementById('commands-global-toggle');
+        globalToggle.checked = localStorage.getItem('commandsGlobalEnabled') !== 'false';
+        globalToggle.addEventListener('change', () => localStorage.setItem('commandsGlobalEnabled', globalToggle.checked));
     },
 
     setupAdminEventListeners() {
@@ -277,7 +348,12 @@ const AdminApp = {
 
     setupAutoRefresh() {
         this.clearAutoRefresh();
-        this.autoRefreshInterval = setInterval(() => this.loadData(), 3000);
+        if (!this.visibilityRefreshBound) {
+            this.visibilityRefreshBound = true;
+            document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' ? this.clearAutoRefresh() : this.setupAutoRefresh());
+        }
+        if (document.visibilityState === 'hidden') return;
+        this.autoRefreshInterval = setInterval(() => this.loadData(), 5000);
     },
 
     clearAutoRefresh() {

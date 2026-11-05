@@ -338,3 +338,43 @@ Copyright (c) 2024 Professor. All rights reserved.
 This project contains code from various open source projects:
 - Baileys (MIT License)
 - Other libraries as listed in package.json
+
+
+---
+
+## Control Center Sidebar Specification
+
+The admin sidebar is organized around five operating areas:
+
+### Session Management
+- **Deploy:** Activate or deactivate a bot session from the Deploy & Sessions view.
+- **Auto-Reconnect:** Automatically retries a session after a disconnect. The UI backs this preference locally and can be restored when the session services start.
+- **Don't Forget Password:** Stores the session credential preference so recovery does not require re-entry unnecessarily. Credentials should always remain encrypted at rest.
+- **Link a Device:** Displays an editable Custom ID, pairing QR placeholder, and refreshable pairing code.
+- Session controls update local preferences immediately and expose clear connection state.
+
+### FAG — Core Features
+The **FAG** area summarizes the control center's core capabilities: session automation, command control, Docker configuration, and live operations.
+
+### Env Vars
+Manage Docker environment variables in a key/value editor. Variables are validated with Docker-safe uppercase names. Browser storage is used until the server-side environment management API is enabled; restart the container for production changes.
+
+### Plugin Settings
+Browse all available commands, search them, enable or disable them globally, and configure command-specific values. Welcome and Goodbye messages are provided as built-in examples.
+
+### Settings
+Contains password management, connection refresh behavior, notifications, port information, and diagnostics.
+
+## UI Behavior
+- A lightweight starfall canvas runs behind the interface and is disabled automatically when reduced-motion is requested.
+- The sidebar collapses for mobile, with a dismissible overlay.
+- Form controls use visible labels, keyboard focus styles, and compact responsive layouts.
+- Background refresh pauses while the browser tab is hidden to reduce unnecessary requests.
+
+## Docker
+```bash
+docker build -t knightbot-md .
+docker run --name knightbot-md -p 3000:3000 --env-file .env knightbot-md
+```
+
+Set runtime values in a local `.env` file and do not commit credentials.
