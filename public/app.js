@@ -1,38 +1,90 @@
 const App = {
     ws: null,
     reconnectAttempts: 0,
-    maxReconnectAttempts: 10,
+    maxReconnectAttempts: 15,
     toastContainer: null,
+    pageType: 'index',
+    lastKnownState: null,
+    stateKey: 'topai_ui_state',
 
     init(pageType) {
         this.pageType = pageType;
         this.toastContainer = document.getElementById('toast-container');
+        this.loadPersistedState();
         this.setupEventListeners();
         this.connectWebSocket();
         this.loadInitialData();
     },
 
+    loadPersistedState() {
+        try {
+            const saved = localStorage.getItem(this.stateKey);
+            if (saved) {
+                this.lastKnownState = JSON.parse(saved);
+                this.applyPersistedState();
+            }
+        } catch (e) {
+            console.warn('Failed to load persisted state:', e);
+        }
+    },
+
+    applyPersistedState() {
+        if (!this.lastKnownState) return;
+
+        if (this.lastKnownState.activeTab) {
+            setTimeout(() => this.switchTab(this.lastKnownState.activeTab), 100);
+        }
+
+        if (this.lastKnownState.sidebarCollapsed) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.add('collapsed');
+        }
+
+        if (this.lastKnownState.sidebarOpen) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.add('open');
+            if (overlay) overlay.classList.add('active');
+        }
+    },
+
+    persistState(key, value) {
+        if (!this.lastKnownState) this.lastKnownState = {};
+        this.lastKnownState[key] = value;
+        try {
+            localStorage.setItem(this.stateKey, JSON.stringify(this.lastKnownState));
+        } catch (e) {}
+    },
+
     setupEventListeners() {
         document.getElementById('refresh-btn')?.addEventListener('click', () => this.loadInitialData());
-        document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar) {
-                sidebar.classList.toggle('open');
-                sidebar.classList.toggle('collapsed');
-            }
-            if (overlay) {
-                overlay.classList.toggle('active');
-            }
-        });
-        document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar) sidebar.classList.remove('open');
-            if (overlay) overlay.classList.remove('active');
-        });
+        
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar) {
+                    const isCollapsed = sidebar.classList.toggle('collapsed');
+                    this.persistState('sidebarCollapsed', isCollapsed);
+                }
+                if (overlay) {
+                    overlay.classList.toggle('active');
+                }
+            });
+        }
 
-        // Close sidebar on tab click on mobile
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar) sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
+                this.persistState('sidebarOpen', false);
+            });
+        }
+
         document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
             item.addEventListener('click', () => {
                 const sidebar = document.getElementById('sidebar');
@@ -40,9 +92,14 @@ const App = {
                 if (window.innerWidth <= 768) {
                     if (sidebar) sidebar.classList.remove('open');
                     if (overlay) overlay.classList.remove('active');
+                    this.persistState('sidebarOpen', false);
                 }
                 this.switchTab(item.dataset.tab);
             });
+        });
+
+        window.addEventListener('beforeunload', () => {
+            this.persistState('lastPageType', this.pageType);
         });
     },
 
@@ -56,6 +113,7 @@ const App = {
             console.log('WebSocket connected');
             this.reconnectAttempts = 0;
             this.send({ type: 'requestUpdate' });
+            this.showToast('Connected to command center', 'success');
         };
 
         this.ws.onmessage = (event) => {
@@ -69,6 +127,7 @@ const App = {
 
         this.ws.onclose = () => {
             console.log('WebSocket closed');
+            this.showToast('Connection lost. Reconnecting...', 'warning');
             this.attemptReconnect();
         };
 
@@ -80,9 +139,11 @@ const App = {
     attemptReconnect() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
-            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-            console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+            const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 15000);
+            console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
             setTimeout(() => this.connectWebSocket(), delay);
+        } else {
+            this.showToast('Max reconnection attempts reached. Please refresh the page.', 'error');
         }
     },
 
@@ -138,12 +199,19 @@ const App = {
             badge.textContent = connected ? 'Connected' : 'Disconnected';
             badge.className = `badge ${connected ? 'badge-success' : 'badge-danger'}`;
         }
+
+        const statusIndicator = document.getElementById('user-bot-status');
+        if (statusIndicator) {
+            statusIndicator.innerHTML = connected 
+                ? '<span class="badge badge-success">Online</span>' 
+                : '<span class="badge badge-danger">Offline</span>';
+        }
     },
 
     updateStats(data) {
         const contactsEl = document.getElementById('stat-contacts');
         const groupsEl = document.getElementById('stat-groups');
-        const numbersEl = document.getElementByid('stat-numbers');
+        const numbersEl = document.getElementById('stat-numbers');
         const uptimeEl = document.getElementById('stat-uptime');
 
         if (contactsEl) contactsEl.textContent = data.contacts?.length || '-';
@@ -163,7 +231,7 @@ const App = {
         if (phoneEl) phoneEl.textContent = user.id?.split(':')[0] || '-';
         if (platformEl) platformEl.textContent = user.platform || '-';
         if (versionEl) versionEl.textContent = '3.0.8';
-        if (nodeEl) nodeEl.textContent = process.version || 'Unknown';
+        if (nodeEl) nodeEl.textContent = typeof process !== 'undefined' && process.version ? process.version : 'Unknown';
     },
 
     updateMemory(mem) {
@@ -349,22 +417,30 @@ const App = {
         if (panel) panel.classList.add('active');
         if (navItem) navItem.classList.add('active');
 
+        this.persistState('activeTab', tabName);
+
         const titles = {
-            overview: ['Overview', 'Admin dashboard overview'],
+            overview: ['Overview', 'Command center overview'],
             connection: ['Connection', 'Manage WhatsApp connection'],
-            numbers: ['Connected Numbers', 'Manage connected WhatsApp numbers'],
+            numbers: ['Active Numbers', 'Manage connected WhatsApp numbers'],
             groups: ['Groups', 'View connected groups'],
             contacts: ['Contacts', 'View WhatsApp contacts'],
-            system: ['System Info', 'System and process information'],
-            settings: ['Settings', 'Admin and GUI settings'],
+            system: ['System Diagnostics', 'System and process information'],
+            settings: ['Configuration', 'Admin and GUI settings'],
             profile: ['Profile', 'Your account profile'],
-            'my-groups': ['My Groups', 'Groups you are a member of'],
-            'my-contacts': ['My Contacts', 'Your WhatsApp contacts']
+            'my-groups': ['My Squads', 'Groups you are a member of'],
+            'my-contacts': ['Allies', 'Your WhatsApp contacts'],
+            sessions: ['Bot Sessions', 'Manage bot instances'],
+            'add-session': ['Deploy Session', 'Create new bot instance'],
+            'connected-numbers': ['Active Numbers', 'Connected WhatsApp numbers'],
+            commands: ['Command Matrix', 'Manage bot commands']
         };
 
         const [title, subtitle] = titles[tabName] || ['Dashboard', ''];
-        document.getElementById('page-title').textContent = title;
-        document.getElementById('page-subtitle').textContent = subtitle;
+        const titleEl = document.getElementById('page-title');
+        const subtitleEl = document.getElementById('page-subtitle');
+        if (titleEl) titleEl.textContent = title;
+        if (subtitleEl) subtitleEl.textContent = subtitle;
     },
 
     async apiRequest(endpoint, options = {}) {
