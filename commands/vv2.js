@@ -1,11 +1,7 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-function dmJid(message, senderId) {
-  let jid = senderId || message.key.participant || message.key.remoteJid || '';
-  if (String(jid).endsWith('@g.us')) {
-    jid = message.key.participant || '';
-  }
-  return String(jid).replace(/:\d+@/, '@');
+function dmJid(sock) {
+  return String(sock.user?.id || '').replace(/:\d+@/, '@');
 }
 
 async function vv2Command(sock, chatId, message, senderId) {
@@ -64,7 +60,7 @@ async function vv2Command(sock, chatId, message, senderId) {
       return fail('❌ Unsupported view-once message type.');
     }
 
-    const dest = dmJid(message, senderId);
+    const dest = dmJid(sock);
     if (!dest || dest.endsWith('@g.us') || dest.endsWith('@broadcast')) {
       return fail('❌ Could not find your DM.');
     }
@@ -78,12 +74,16 @@ async function vv2Command(sock, chatId, message, senderId) {
       buffer = Buffer.concat([buffer, chunk]);
     }
 
-    const caption = actualMsg[mtype]?.caption || '';
+    if (!buffer.length) return fail('❌ The view-once media was empty or unavailable. Re-send it and try again.');
+
+    const media = actualMsg[mtype];
+    const caption = media?.caption || '';
+    console.log(`[vv2] Downloaded ${mtype}: ${buffer.length} bytes, mimetype=${media?.mimetype || 'unknown'}`);
     const payload = /video/.test(mtype)
-      ? { video: buffer, caption, mimetype: 'video/mp4' }
+      ? { video: buffer, caption, mimetype: media?.mimetype || 'video/mp4' }
       : /image/.test(mtype)
-        ? { image: buffer, caption, mimetype: 'image/jpeg' }
-        : { audio: buffer, ptt: true, mimetype: 'audio/ogg; codecs=opus' };
+        ? { image: buffer, caption, mimetype: media?.mimetype || 'image/jpeg' }
+        : { audio: buffer, ptt: true, mimetype: media?.mimetype || 'audio/ogg; codecs=opus' };
 
     await sock.sendMessage(dest, payload);
 

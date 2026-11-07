@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { normalizeJidWithLid } = require('../lib/jidHelper');
 
 const configPath = path.join(__dirname, '..', 'data', 'vv.json');
 
@@ -15,11 +16,47 @@ function readMode() {
 
 function writeMode(mode) {
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
-    fs.writeFileSync(configPath, JSON.stringify({ mode }, null, 2));
+    const temporaryPath = `${configPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temporaryPath, JSON.stringify({ mode }, null, 2));
+    fs.renameSync(temporaryPath, configPath);
 }
 
-function normalizeJid(jid) {
-    return String(jid || '').replace(/:\d+@/, '@');
+async function resolvePhoneJid(sock, jid) {
+    const raw = String(jid || '').replace(/:\d+@/, '@');
+    if (!raw || raw.endsWith('@g.us') || raw.endsWith('@broadcast')) return '';
+
+    if (raw.endsWith('@lid') || raw.endsWith('@hosted.lid')) {
+        try {
+            const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(raw);
+            if (pn) return String(pn).replace(/:\d+@/, '@');
+        } catch (_) {}
+    }
+
+    const normalized = normalizeJidWithLid(raw);
+    if (!normalized || normalized === '@s.whatsapp.net') return '';
+    if (normalized.endsWith('@s.whatsapp.net')) return normalized;
+    return '';
+}
+
+async function getSenderJid(sock, message, senderId) {
+    const connectedJid = String(sock.user?.id || '').replace(/:\d+@/, '@');
+    const resolvedConnectedJid = await resolvePhoneJid(sock, connectedJid);
+    if (resolvedConnectedJid) return resolvedConnectedJid;
+
+    const candidates = [
+        message.key?.remoteJidAlt,
+        message.key?.participantAlt,
+        message.key?.participantPn,
+        senderId,
+        message.key?.participant,
+        message.key?.remoteJid
+    ];
+
+    for (const candidate of candidates) {
+        const jid = await resolvePhoneJid(sock, candidate);
+        if (jid) return jid;
+    }
+    return '';
 }
 
 async function viewonceCommand(sock, chatId, message, senderId, args = '') {
@@ -74,25 +111,37 @@ async function viewonceCommand(sock, chatId, message, senderId, args = '') {
         const chunks = [];
         for await (const chunk of stream) chunks.push(chunk);
         const buffer = Buffer.concat(chunks);
+        if (!buffer.length) {
+            return reply('❌ The view-once media was empty or unavailable. Re-send the view-once and try again.');
+        }
+        console.log(`[vv] Downloaded ${mediaType}: ${buffer.length} bytes, mimetype=${media.mimetype || 'unknown'}`);
 
         let payload;
         if (mediaType === 'image') {
-            payload = { image: buffer, caption: media.caption || '' };
+            payload = { image: buffer, caption: media.caption || '', mimetype: media.mimetype || 'image/jpeg' };
         } else if (mediaType === 'video') {
-            payload = { video: buffer, caption: media.caption || '' };
+            payload = { video: buffer, caption: media.caption || '', mimetype: media.mimetype || 'video/mp4' };
         } else {
-            payload = { audio: buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true };
+            payload = { audio: buffer, mimetype: media.mimetype || 'audio/ogg; codecs=opus', ptt: true };
         }
 
         let destination = chatId;
         if (readMode() === 'dm') {
-            destination = normalizeJid(senderId || message.key.participant || message.key.remoteJid);
+            destination = await getSenderJid(sock, message, senderId);
             if (!destination || destination.endsWith('@g.us')) {
                 return reply('❌ Could not find the sender DM.');
             }
         }
 
-        await sock.sendMessage(destination, payload);
+        console.log(`[vv] Sending ${mediaType} to ${destination}`);
+        try {
+            await sock.sendMessage(destination, payload);
+            console.log(`[vv] Media sent successfully to ${destination}`);
+        } catch (error) {
+            if (error?.output?.statusCode !== 428) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await sock.sendMessage(destination, payload);
+        }
         if (destination !== chatId) {
             await reply('✅ View-once sent to your DM.');
         }

@@ -167,6 +167,7 @@ const channelInfo = {
 };
 
 async function handleMessages(sock, messageUpdate, printLog) {
+    let chatId = null;
     try {
         const { messages, type } = messageUpdate;
         const message = messages[0];
@@ -187,7 +188,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
             return;
         }
 
-        const chatId = message.key.remoteJid;
+        chatId = message.key.remoteJid;
         const senderId = message.key.participant || message.key.remoteJid;
         const isGroup = chatId.endsWith('@g.us');
         const senderIsSudo = await isSudo(senderId);
@@ -196,7 +197,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
         // Handle button responses
         if (message.message?.buttonsResponseMessage) {
             const buttonId = message.message.buttonsResponseMessage.selectedButtonId;
-            const chatId = message.key.remoteJid;
+            chatId = message.key.remoteJid;
 
             if (buttonId === 'channel') {
                 await sock.sendMessage(chatId, {
@@ -1236,10 +1237,14 @@ async function handleMessages(sock, messageUpdate, printLog) {
         console.error('❌ Error in message handler:', error.message);
         // Only try to send error message if we have a valid chatId
         if (chatId) {
-            await sock.sendMessage(chatId, {
-                text: '❌ Failed to process command!',
-                ...channelInfo
-            });
+            try {
+                await sock.sendMessage(chatId, {
+                    text: '❌ Failed to process command!',
+                    ...channelInfo
+                });
+            } catch (sendError) {
+                console.warn(`⚠️ Could not send command error response: ${sendError?.message || sendError}`);
+            }
         }
     }
 }
