@@ -4,9 +4,10 @@ const sha = (s) => createHash("sha256").update(String(s)).digest();
 
 // Fails closed: an unset/blank ADMIN_PASSWORD never matches (previously undefined === undefined logged in).
 export const checkAdminPassword = (input) => {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected || typeof input !== "string") return false;
-  return timingSafeEqual(sha(input), sha(expected));
+  const expected = process.env.ADMIN_PASSWORD?.trim();
+  const candidate = typeof input === "string" ? input.trim() : input;
+  if (!expected || typeof candidate !== "string") return false;
+  return timingSafeEqual(sha(candidate), sha(expected));
 };
 
 // ponytail: in-memory per-process limiter (resets on restart, one instance only). Use Redis if you scale out.
