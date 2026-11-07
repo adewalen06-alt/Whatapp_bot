@@ -18,6 +18,19 @@ import {
   group,
   migrateGroupMemberPNToLID,
 } from "../db/groupData.js";
+
+const antilinkPatterns = {
+  whatsappGroup: /chat\.whatsapp\.com\/[A-Za-z0-9]{20,}/i,
+  whatsappChannel: /wa\.me\/channel\/[A-Za-z0-9]{20,}/i,
+  telegram: /t\.me\/[A-Za-z0-9_]+/i,
+  allLinks: /https?:\/\/\S+|www\.\S+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/i,
+};
+
+const detectAntilink = (body, mode) => {
+  if (!body) return false;
+  const p = antilinkPatterns[mode] || antilinkPatterns.allLinks;
+  return p.test(body);
+};
 import {
   commandsPublic,
   commandsMembers,
@@ -508,6 +521,34 @@ const getCommand = async (sock, msg, cache) => {
             `💬 <b>In:</b> ${escapeHtml(groupMetadata.subject)}`,
           msg,
         );
+      }
+    }
+    //---------------------------------------------------ANTI-LINK---------------------------------------------------//
+    if (isGroup && groupData?.antilink?.enabled && body) {
+      const mode = groupData.antilink.mode || "allLinks";
+      const action = groupData.antilink.action || "delete";
+      if (detectAntilink(body, mode)) {
+        try {
+          await sock.sendMessage(from, {
+            delete: { remoteJid: from, fromMe: false, id: msg.key.id, participant: senderJid },
+          });
+        } catch (delErr) {
+          console.error("[antilink delete failed]", delErr.message);
+        }
+        const phone = senderJid.split("@")[0];
+        if (action === "kick") {
+          try {
+            await sock.groupParticipantsUpdate(from, [senderJid], "remove");
+            await sendMessageWTyping(from, { text: `🚫 Link blocked — @${phone} removed.`, mentions: [senderJid] }, { quoted: msg });
+          } catch (kickErr) {
+            await sendMessageWTyping(from, { text: `🚫 Link blocked — could not remove @${phone}.`, mentions: [senderJid] }, { quoted: msg });
+          }
+        } else if (action === "warn") {
+          await sendMessageWTyping(from, { text: `⚠️ Link blocked — @${phone}, posting links is not allowed.`, mentions: [senderJid] }, { quoted: msg });
+        } else {
+          await sendMessageWTyping(from, { text: `🚫 Link blocked — @${phone}, posting links is not allowed.`, mentions: [senderJid] }, { quoted: msg });
+        }
+        return;
       }
     }
     //---------------------------------------------------NO-CMD----------------------------------------------------//
