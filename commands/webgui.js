@@ -6,7 +6,7 @@ async function webguiCommand(sock, chatId) {
     const ownerNumbers = numbers.filter(n => n.isOwner).map(n => n.number);
     const otherNumbers = numbers.filter(n => !n.isOwner).map(n => n.number);
 
-    const text = `🌐 *Knight Bot Web GUI*\n\n` +
+    const text = `🌐 *Topai Bot Web GUI*\n\n` +
         `📱 *Access URLs:*\n` +
         `• Admin Panel: http://localhost:3000/admin.html\n` +
         `• User Panel: http://localhost:3000/user.html\n` +
@@ -33,11 +33,6 @@ async function webguiCommand(sock, chatId) {
         contextInfo: {
             forwardingScore: 1,
             isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363161513685998@newsletter',
-                newsletterName: 'KnightBot MD',
-                serverMessageId: -1
-            }
         }
     });
 }

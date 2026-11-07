@@ -1,29 +1,41 @@
-# 🤖 Knight Bot
+# 🤖 Topai Bot
 
-This is a WhatsApp bot built using the Baileys library for group management, including features like tagging all members, muting/unmuting, and many more. It's designed to help admins efficiently manage WhatsApp groups.
+Topai is a WhatsApp bot built with Baileys for group management, automation, media commands, view-once handling, plugin controls, and session management. The project includes a responsive admin control center and support for WhatsApp QR or pairing-code login.
 
-<div align="center"> 
-  <a href="https://git.io/typing-svg"> 
-    <img src="https://readme-typing-svg.demolab.com?font=Ribeye&size=50&pause=1000&color=33ff00&center=true&width=910&height=100&lines=Knight-Bot;Multi+Device+Whatsapp+Bot;Coded+By+Professor" alt="Typing SVG" />
-  </a> 
-</div> 
+### Recent Features
+- ✅ `.vv` view-once image, video, and audio support
+- ✅ `.vv set dm` or `.vv set normal` delivery modes
+- ✅ Connected-account DM confirmation
+- ✅ `.ping` status command branded as Topai
+- ✅ `.mode public/private` command responses with the official Topai channel
+- ✅ Reconnect handling and connection debug diagnostics
+- ✅ Modern admin dashboard with Docker environment management
 
-<div align="center"> 
-  <a href="https://youtube.com/@mr_unique_hacker"> 
-    <img src="https://github.com/mruniquehacker/Knightbot-MD/blob/main/assets/bot_image.jpg" alt="Knight Bot" height="300"> 
-  </a> 
+### Official Channel
+Join [Topai on WhatsApp](https://whatsapp.com/channel/0029vb8viwd7oqhwdslne71s).
+
+<div align="center">
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.demolab.com?font=Ribeye&size=50&pause=1000&color=33ff00&center=true&width=910&height=100&lines=Topai-Bot;Multi+Device+Whatsapp+Bot;Coded+By+Nicetv1165" alt="Typing SVG" />
+  </a>
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/github/followers/mruniquehacker?style=for-the-badge&label=Followers" alt="Followers"/>
-  <img src="https://img.shields.io/github/stars/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Stars" alt="Stars"/>
-  <img src="https://img.shields.io/github/forks/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Forks" alt="Forks"/>
-  <img src="https://img.shields.io/github/watchers/mruniquehacker/Knightbot-MD?style=for-the-badge&label=Watchers" alt="Watchers"/>
+  <a href="https://whatsapp.com/channel/0029vb8viwd7oqhwdslne71s">
+    <img src="assets/bot_image.jpg" alt="Topai Bot with headset" height="300">
+  </a>
+</div>
+
+<div align="center">
+  <img src="https://img.shields.io/github/followers/Nicetv1165?style=for-the-badge&label=Followers" alt="Followers"/>
+  <img src="https://img.shields.io/github/stars/Nicetv1165/Topai-MD?style=for-the-badge&label=Stars" alt="Stars"/>
+  <img src="https://img.shields.io/github/forks/Nicetv1165/Topai-MD?style=for-the-badge&label=Forks" alt="Forks"/>
+  <img src="https://img.shields.io/github/watchers/Nicetv1165/Topai-MD?style=for-the-badge&label=Watchers" alt="Watchers"/>
 </div>
 
 ---
 <div>
-  <a href="https://www.rapidproxy.io/?ref=Knightbot" target="_blank">
+  <a href="https://www.rapidproxy.io/?ref=Topai" target="_blank">
     <img src="assets/rapid.jpg" alt="RapidProxy" width="100%" />
   </a>
 </div>
@@ -31,15 +43,15 @@ This is a WhatsApp bot built using the Baileys library for group management, inc
 <br>
 
 <div align="left">
-  <a href="https://www.rapidproxy.io/?ref=Knightbot" target="_blank"><b>RapidProxy</b></a> delivers fast, reliable proxy infrastructure for large-scale data operations. With high concurrency, non-expiring traffic, and AI-powered CAPTCHA bypass, it ensures efficient, uninterrupted data collection—trusted by developers worldwide.<br><br>
+  <a href="https://www.rapidproxy.io/?ref=Topai" target="_blank"><b>RapidProxy</b></a> delivers fast, reliable proxy infrastructure for large-scale data operations. With high concurrency, non-expiring traffic, and AI-powered CAPTCHA bypass, it ensures efficient, uninterrupted data collection—trusted by developers worldwide.<br><br>
   90M+ Residential IPs • Smart Rotation • High Success Rate • Built for Scale<br><br>
-  <b>Special Offer:</b> <a href="https://www.rapidproxy.io/?ref=Knightbot" target="_blank">Try it free</a> — Pricing from $0.65/GB with non-expiring traffic. Use code <b>RAPID10</b> for 10% off.
+  <b>Special Offer:</b> <a href="https://www.rapidproxy.io/?ref=Topai" target="_blank">Try it free</a> — Pricing from $0.65/GB with non-expiring traffic. Use code <b>RAPID10</b> for 10% off.
 </div>
 
 <br>
 
 <div align="left">
-  <a href="https://www.rapidproxy.io/?ref=Knightbot" target="_blank">
+  <a href="https://www.rapidproxy.io/?ref=Topai" target="_blank">
     <img src="https://img.shields.io/badge/Try now-28a745?style=for-the-badge" alt="Try now"/>
   </a>
 </div>
@@ -49,10 +61,10 @@ This is a WhatsApp bot built using the Baileys library for group management, inc
 
 ### Step 1: Fork the Repository
 
-Click the button below to fork the Knight Bot repository to your GitHub account:
+Click the button below to fork the Topai Bot repository to your GitHub account:
 
 <div align="center">
-  <a href="https://github.com/mruniquehacker/Knightbot-MD/fork">
+  <a href="https://github.com/Nicetv1165/Topai-MD/fork">
     <img src="https://img.shields.io/badge/Fork-Repository-blue?style=for-the-badge" alt="Fork the repository"/>
   </a>
 </div>
@@ -64,7 +76,7 @@ Click the button below to fork the Knight Bot repository to your GitHub account:
 Deploy the bot and easily connect it to your WhatsApp account by pair code. Click the button below to deploy the bot on Replit.
 
 <div align="center">
-  <a href="https://knight-bot-paircode.onrender.com" target="_blank">
+  <a href="https://topai-bot-paircode.onrender.com" target="_blank">
     <img src="https://img.shields.io/badge/GET%20PAIR%20CODE-Easy%20Method-ff4d4d?style=for-the-badge" alt="Generate Pair Code"/>
   </a>
 </div>
@@ -85,7 +97,7 @@ For further customization and setup guidance, click the button below:
   <a href="https://bot-hosting.net/?aff=1068419752923508776">
     <img src="https://img.shields.io/badge/Deploy on Panel-28a745?style=for-the-badge" alt="Deploy on Panel"/>
   </a>
-  <a href="https://render.com/deploy?repo=https://github.com/mruniquehacker/Knightbot-MD">
+  <a href="https://render.com/deploy?repo=https://github.com/Nicetv1165/Topai-MD">
     <img src="https://img.shields.io/badge/Deploy%20to%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Deploy to Render"/>
   </a>
 </div>
@@ -113,15 +125,15 @@ For further customization and setup guidance, click the button below:
 
 ```bash
 # Build the image
-docker build -t knightbot .
+docker build -t topai .
 
 # Run the container
 docker run -d \
-  --name knightbot \
+  --name topai \
   -p 3000:3000 \
   -v $(pwd)/sessions:/app/sessions \
   -v $(pwd)/data:/app/data \
-  knightbot
+  topai
 ```
 
 ### Docker Compose
@@ -132,9 +144,9 @@ Create a `docker-compose.yml`:
 version: '3.8'
 
 services:
-  knightbot:
+  topai:
     build: .
-    container_name: knightbot
+    container_name: topai
     ports:
       - "3000:3000"
     volumes:
@@ -160,7 +172,7 @@ docker-compose up -d
    - Click **New +** → **Web Service**
    - Connect your forked GitHub repository
    - Configure:
-     - **Name**: `knightbot` (or your preferred name)
+     - **Name**: `topai` (or your preferred name)
      - **Environment**: `Docker`
      - **Region**: Choose closest to you
      - **Branch**: `main` (or your default branch)
@@ -205,7 +217,7 @@ docker-compose up -d
   <a href="https://t.me/+3QhFUZHx-nhhZmY1">
     <img src="https://img.shields.io/badge/Join%20Telegram-0078E7?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram"/>
   </a>
-  <a href="https://whatsapp.com/channel/0029Va90zAnIHphOuO8Msp3A">
+  <a href="https://whatsapp.com/channel/0029vb8viwd7oqhwdslne71s">
     <img src="https://img.shields.io/badge/Join%20WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join WhatsApp"/>
   </a>
 </div>
@@ -226,7 +238,7 @@ docker-compose up -d
 
 ## 📖 About
 
-The Knight WhatsApp Bot assists group admins by providing them with tools to efficiently manage large WhatsApp groups. The bot uses the Baileys library to interact with the WhatsApp Web API and supports multi-device features.
+The Topai WhatsApp Bot assists group admins by providing them with tools to efficiently manage large WhatsApp groups. The bot uses the Baileys library to interact with the WhatsApp Web API and supports multi-device features.
 
 It is lightweight and can be easily customized to add more commands as per your requirements. The bot runs in a Node.js environment and provides QR code-based authentication to link your WhatsApp account.
 
@@ -244,8 +256,8 @@ It is lightweight and can be easily customized to add more commands as per your 
 1. **Clone the repository:**
 
     ```bash
-    git clone https://github.com/mruniquehacker/Knightbot-MD.git
-    cd Knightbot-MD
+    git clone https://github.com/Nicetv1165/Topai-MD.git
+    cd Topai-MD
     ```
 
 2. **Install the dependencies:**
@@ -270,7 +282,7 @@ It is lightweight and can be easily customized to add more commands as per your 
 
 <div align="center">
 
-<a href="https://buymeacoffee.com/mruniquehacker" target="_blank">
+<a href="https://buymeacoffee.com/Nicetv1165" target="_blank">
   <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20Developer-FF813F?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white" alt="Buy Me a Coffee">
 </a>
 
@@ -288,24 +300,24 @@ If you find this project helpful and want to support the developer, consider buy
 
 ## 📄 License
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT) - see the [LICENSE](https://github.com/mruniquehacker/Knightbot-MD/blob/main/LICENSE) file for details.
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT) - see the [LICENSE](https://github.com/Nicetv1165/Topai-MD/blob/main/LICENSE) file for details.
 
 ---
 
 ## 🙌 Contributions
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/mruniquehacker/Knightbot-MD/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Nicetv1165/Topai-MD/issues).
 
 ---
 
 ## 🌟 Show your support
 
-If you like this project, please give it a [⭐️ star on GitHub](https://github.com/mruniquehacker/Knightbot)!
+If you like this project, please give it a [⭐️ star on GitHub](https://github.com/Nicetv1165/Topai)!
 
 
 ## Credits
 
-- [Professor](https://github.com/mruniquehacker)
+- [Nicetv1165](https://github.com/Nicetv1165)
 - [Baileys](https://github.com/adiwajshing/Baileys)
 - [TechGod143](https://github.com/TechGod143) for pair code
 - [Dgxeon](https://github.com/Dgxeon) for pair code
@@ -333,7 +345,7 @@ This project is licensed under the MIT License. However, you must:
 
 ## 📜 Copyright Notice
 
-Copyright (c) 2024 Professor. All rights reserved.
+Copyright (c) 2024 Nicetv1165. All rights reserved.
 
 This project contains code from various open source projects:
 - Baileys (MIT License)
@@ -373,8 +385,8 @@ Contains password management, connection refresh behavior, notifications, port i
 
 ## Docker
 ```bash
-docker build -t knightbot-md .
-docker run --name knightbot-md -p 3000:3000 --env-file .env knightbot-md
+docker build -t topai-md .
+docker run --name topai-md -p 3000:3000 --env-file .env topai-md
 ```
 
 Set runtime values in a local `.env` file and do not commit credentials.

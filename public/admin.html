@@ -6,9 +6,6 @@
     <title>topai - Admin Command Center</title>
     <link rel="stylesheet" href="/public/styles.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <canvas id="starfall" aria-hidden="true"></canvas>
@@ -201,15 +198,18 @@
                                 <div class="toggle-row"><div><strong>Auto-reconnect</strong><small>Reconnect automatically after a disconnection</small></div><label class="switch"><input id="session-auto-reconnect" type="checkbox" checked><span></span></label></div>
                                 <div class="toggle-row"><div><strong>Don’t forget password</strong><small>Keep encrypted credentials for faster recovery</small></div><label class="switch"><input id="session-remember-password" type="checkbox" checked><span></span></label></div>
                                 <label class="label" for="custom-session-id">Custom ID</label>
-                                <input type="text" class="input" id="custom-session-id" value="knight-001" aria-describedby="custom-id-help">
+                                <input type="text" class="input" id="custom-session-id" value="topai-001" aria-describedby="custom-id-help">
                                 <small id="custom-id-help" style="color: var(--text-muted);">Editable session identifier. Changes are saved locally.</small>
                             </div>
                             <div class="pairing-panel">
                                 <div class="section-kicker">LINK A DEVICE</div>
-                                <div class="qr-placeholder" id="link-device-qr" aria-label="Pairing QR code"><div class="qr-grid"></div></div>
-                                <div class="pairing-code" id="pairing-code">KNIGHT • 4829</div>
-                                <small>Scan in WhatsApp or enter this code to link a device</small>
-                                <button type="button" class="btn btn-secondary btn-sm" id="refresh-pairing">Refresh pairing code</button>
+                                <div class="qr-placeholder" id="link-device-qr" aria-label="Pairing QR code"><div class="qr-grid"><span>QR waiting</span></div></div>
+                                <label class="label" for="link-phone-number">Phone to link</label>
+                                <input type="tel" class="input" id="link-phone-number" placeholder="Country code + number" autocomplete="tel">
+                                <div class="pairing-code" id="pairing-code">PAIR CODE</div>
+                                <small>Scan the QR or enter this code in WhatsApp</small>
+                                <button type="button" class="btn btn-primary btn-sm" id="refresh-pairing">Generate QR & Pair Code</button>
+                                <div class="pairing-debug" id="pairing-debug" role="status" aria-live="polite"><strong>Status</strong><span>Waiting to start</span></div>
                             </div>
                         </div>
                         <form id="add-session-form">

@@ -46,15 +46,15 @@ async function hanggtsFacebookDownload(url) {
 
 async function resolveFacebook(url) {
   try {
-    return await APIs.knightFacebookDownload(url);
+    return await APIs.topaiFacebookDownload(url);
   } catch (err) {
-    console.log('[facebook] Knight failed:', err?.message || err);
+    console.log('[facebook] Topai failed:', err?.message || err);
   }
   return hanggtsFacebookDownload(url);
 }
 
 async function sendVideo(sock, chatId, message, videoUrl, title) {
-  const bot = (settings.botName || 'Knight Bot').toUpperCase();
+  const bot = (settings.botName || 'Topai Bot').toUpperCase();
   const caption = title ? `*DOWNLOADED BY ${bot}*\n\n📝 ${title}` : `*DOWNLOADED BY ${bot}*`;
 
   try {

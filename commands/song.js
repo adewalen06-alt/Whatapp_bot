@@ -8,7 +8,7 @@ const APIs = require('../lib/api');
 const {
   UA,
   isIpLockedCdn,
-  knightSongDownload,
+  topaiSongDownload,
   hectorSongDownload,
   princeSongDownload,
   prexzySongDownload,
@@ -116,9 +116,9 @@ async function songCommand(sock, chatId, message) {
     let audioData;
     let audioBuffer;
 
-    // Knight first; rest are fallbacks (same sources as mini)
+    // Topai first; rest are fallbacks (same sources as mini)
     const apiMethods = [
-      { name: 'Knight API', method: () => knightSongDownload(video.url) },
+      { name: 'Topai API', method: () => topaiSongDownload(video.url) },
       { name: 'Hector', method: () => hectorSongDownload(video.url) },
       { name: 'Prince API', method: () => princeSongDownload(video.url) },
       { name: 'Prexzy', method: () => prexzySongDownload(video.url) },

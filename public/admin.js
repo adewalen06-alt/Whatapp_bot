@@ -10,6 +10,7 @@ const AdminApp = {
         this.initSessionControls();
         this.initEnvVars();
         this.initPluginTweaks();
+        this.setupConnectionEvents();
         this.setupAdminEventListeners();
         this.setupTabNavigation();
         await this.checkAuth();
@@ -17,6 +18,95 @@ const AdminApp = {
         this.setupAutoRefresh();
     },
 
+
+
+
+    updatePairingDebug(message, level = 'info') {
+        const debug = document.getElementById('pairing-debug');
+        if (!debug) return;
+        const label = level === 'error' ? 'Error' : level === 'success' ? 'Ready' : 'Status';
+        debug.className = `pairing-debug ${level}`;
+        debug.innerHTML = `<strong>${label}</strong><span>${this.escapeHtml(message)}</span>`;
+    },
+
+    async generateSidebarPairing() {
+        const number = document.getElementById('session-number')?.value.trim().replace(/\D/g, '');
+        const phoneNumber = document.getElementById('link-phone-number')?.value.trim().replace(/\D/g, '');
+        const button = document.getElementById('refresh-pairing');
+        const code = document.getElementById('pairing-code');
+        const qr = document.getElementById('link-device-qr');
+        if (!/^\d{7,15}$/.test(phoneNumber)) {
+            this.showToast('Enter the phone number to link with its country code', 'error');
+            return;
+        }
+        if (!/^\d{7,15}$/.test(number)) {
+            this.showToast('Deploy the session or enter its phone number first', 'error');
+            return;
+        }
+        button.disabled = true;
+        button.textContent = 'Generating...';
+        code.textContent = 'GENERATING';
+        this.updatePairingDebug('Starting linking request…', 'info');
+        qr.innerHTML = '<div class="pairing-loading"><span class="loading"></span></div>';
+        try {
+            this.updatePairingDebug('Sending pairing request to the server…', 'info');
+            const pairResponse = await fetch('/api/bot/sessions/pair-code', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ number, phoneNumber }), signal: AbortSignal.timeout(15000)
+            });
+            const pair = await pairResponse.json();
+            if (!pairResponse.ok || !pair.success) throw new Error(pair.message || 'Pair code could not be generated');
+            code.textContent = pair.code;
+            if (pair.debug?.length) this.updatePairingDebug(pair.debug.slice(-5).map(item => item.message).join(' · '), 'info');
+            this.updatePairingDebug('Pair-code mode is active; QR stays separate until pairing is finished', 'info');
+            qr.innerHTML = '<div class="pairing-loading">Use pair code in WhatsApp</div>';
+            this.showToast('Linking code ready', 'success');
+        } catch (error) {
+            qr.innerHTML = '<div class="pairing-loading">Try again</div>';
+            this.updatePairingDebug(error.message || 'Linking request failed', 'error');
+            this.showToast(error.name === 'TimeoutError' ? 'WhatsApp took too long to respond' : error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Generate QR & Pair Code';
+        }
+    },
+
+
+    setupConnectionEvents() {
+        if (this.ws) return;
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        this.wsRetry = this.wsRetry || 500;
+        try {
+            this.ws = new WebSocket(`${protocol}//${location.host}/ws`);
+            this.ws.onmessage = event => {
+                let update;
+                try { update = JSON.parse(event.data); } catch { return; }
+                if (update.type !== 'sessionUpdate' && update.type !== 'fullUpdate') return;
+                const status = update.type === 'sessionUpdate'
+                    ? update.data
+                    : update.data.sessions?.find(item => item.number === document.getElementById('session-number')?.value.trim());
+                if (!status || !document.getElementById('pairing-debug')) return;
+                const latest = status.debug?.slice(-1)[0]?.message;
+                if (latest) this.updatePairingDebug(latest, status.status === 'connected' ? 'success' : 'info');
+                if (status.qrCode && this.currentLinkQr !== status.qrCode) {
+                    this.currentLinkQr = status.qrCode;
+                    fetch('/api/bot/sessions/qr-code', {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ number: status.number })
+                    }).then(response => response.json()).then(result => {
+                        if (result.success) document.getElementById('link-device-qr').innerHTML = `<img src="${result.qr}" alt="Pairing QR code">`;
+                    }).catch(() => {});
+                }
+            };
+            this.ws.onclose = () => {
+                this.ws = null;
+                setTimeout(() => this.setupConnectionEvents(), Math.min(this.wsRetry = this.wsRetry * 2, 5000));
+            };
+            this.ws.onerror = () => this.ws?.close();
+        } catch (error) {
+            this.updatePairingDebug('Live connection unavailable; using status refresh', 'error');
+        }
+    },
 
     initStarfall() {
         const canvas = document.getElementById('starfall');
@@ -51,11 +141,7 @@ const AdminApp = {
             if (saved !== null) el.checked = saved === 'true';
             el.addEventListener('change', () => localStorage.setItem(id, el.checked));
         }
-        document.getElementById('refresh-pairing')?.addEventListener('click', () => {
-            const code = Math.floor(100000 + Math.random()*900000).toString().match(/.{3}/g).join(' ');
-            document.getElementById('pairing-code').textContent = code;
-            this.showToast('Pairing code refreshed', 'success');
-        });
+        document.getElementById('refresh-pairing')?.addEventListener('click', () => this.generateSidebarPairing());
     },
 
     initEnvVars() {

@@ -29,7 +29,7 @@ function tikTokUrlVariants(url) {
 }
 
 function captionFor(title) {
-  const bot = (settings.botName || 'Knight Bot').toUpperCase();
+  const bot = (settings.botName || 'Topai Bot').toUpperCase();
   return title ? `*DOWNLOADED BY ${bot}*\n\n📝 ${title}` : `*DOWNLOADED BY ${bot}*`;
 }
 
@@ -67,21 +67,21 @@ async function resolveTikTok(url) {
 
   for (const candidate of tikTokUrlVariants(url)) {
     try {
-      const dl = await APIs.knightTikTokDownload(candidate);
+      const dl = await APIs.topaiTikTokDownload(candidate);
       // Real mp4
       if (dl?.download && /^https?:\/\//i.test(dl.download)) {
-        console.log(`[tiktok] Knight OK video (${candidate})`);
+        console.log(`[tiktok] Topai OK video (${candidate})`);
         return dl;
       }
       // Photo-mode post: images + audio → render as video (TikTok style)
       if (dl?.images?.length) {
-        console.log(`[tiktok] Knight OK slideshow (${candidate}) images=${dl.images.length}`);
+        console.log(`[tiktok] Topai OK slideshow (${candidate}) images=${dl.images.length}`);
         return dl;
       }
-      console.log(`[tiktok] Knight skipped (${candidate})`);
+      console.log(`[tiktok] Topai skipped (${candidate})`);
     } catch (err) {
-      errors.push(`Knight: ${err?.message || err}`);
-      console.log(`[tiktok] Knight failed:`, err?.message || err);
+      errors.push(`Topai: ${err?.message || err}`);
+      console.log(`[tiktok] Topai failed:`, err?.message || err);
     }
   }
 
