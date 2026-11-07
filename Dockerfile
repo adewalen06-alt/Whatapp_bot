@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     webp \
     git \
+    nodejs \
     wget \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -44,4 +45,6 @@ EXPOSE 8080
 
 # Start as root only to fix ownership of the (possibly root-owned, pre-existing) temp volume, then drop to the
 # unprivileged "bun" user. If setpriv is missing it falls back to running as root instead of failing to start.
-CMD ["sh", "-c", "chown -R bun:bun /app/temp 2>/dev/null; if command -v setpriv >/dev/null 2>&1; then exec setpriv --reuid=bun --regid=bun --init-groups env HOME=/home/bun bun --smol index.js; else echo \"setpriv not found - running as root\"; exec bun --smol index.js; fi"]
+# Bun is used only for dependency installation and dashboard builds. Node.js owns
+# production runtime networking so MongoDB TLS matches the MongoDB driver.
+CMD ["sh", "-c", "chown -R bun:bun /app/temp 2>/dev/null; exec node index.js"]
