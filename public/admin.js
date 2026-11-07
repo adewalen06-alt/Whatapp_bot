@@ -52,7 +52,7 @@ const AdminApp = {
             this.updatePairingDebug('Sending pairing request to the server…', 'info');
             const pairResponse = await fetch('/api/bot/sessions/pair-code', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ number, phoneNumber }), signal: AbortSignal.timeout(15000)
+                body: JSON.stringify({ number, phoneNumber }), signal: AbortSignal.timeout(60000)
             });
             const pair = await pairResponse.json();
             if (!pairResponse.ok || !pair.success) throw new Error(pair.message || 'Pair code could not be generated');
