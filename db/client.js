@@ -19,7 +19,7 @@ const mdClient = new MongoClient(uri, {
   },
 });
 
-(async () => {
+export const mongoReady = (async () => {
   try {
     await mdClient.connect();
     console.log("Connected to MongoDB");
@@ -39,7 +39,8 @@ const mdClient = new MongoClient(uri, {
       .collection("Groups")
       .createIndex({ "members.id": 1 }, { background: true, sparse: true });
   } catch (err) {
-    console.error("Error connecting to MongoDB:", err);
+    console.error("MongoDB connection failed:", err.message || err);
+    throw err;
   }
 })();
 

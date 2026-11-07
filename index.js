@@ -1,4 +1,5 @@
 import startSock, { onNewSock } from "./connection.js";
+import { mongoReady } from "./db/client.js";
 import { startReminderScheduler } from "./utils/reminderScheduler.js";
 import getDate from "./utils/date.js";
 import { normalizeJID } from "./utils/lid.js";
@@ -177,7 +178,11 @@ const server = app.listen(port, () => {
   _log(`  Eva Bot  ·  ${getDate()}`);
   _log(`  Port: ${port}  ·  Heap: ${mem}MB`);
   _log(`${"═".repeat(50)}\n`);
-  startServer();
+  startServer().catch((error) => {
+    console.error("Application startup aborted because MongoDB is unavailable.");
+    process.exitCode = 1;
+    setTimeout(() => process.exit(1), 1000);
+  });
 });
 
 app.on("error", (error) => {
@@ -334,6 +339,7 @@ wss.on("connection", async (ws, req) => {
 
 // ── Bot start ─────────────────────────────────────────────────────────────────
 async function startServer() {
+  await mongoReady;
   await startSock("start");
   startReminderScheduler();
   // handleNewSock() is called by the onNewSock hook inside connection.js,
