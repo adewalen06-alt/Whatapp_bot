@@ -77,7 +77,6 @@
     "python": ">=3.9.x"
   },
   "trustedDependencies": [
-    "baileys",
-    "youtube-dl-exec"
+    "baileys"
   ]
 }
