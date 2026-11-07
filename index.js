@@ -1,147 +1,408 @@
-/**
- * topai - A WhatsApp Bot
- * Copyright (c) 2024 Nicetv1165
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the MIT License.
- * 
- * Credits:
- * - Baileys Library by @adiwajshing
- * - Pair Code implementation inspired by TechGod143 & DGXEON
- */
-require('./settings')
-const { Boom } = require('@hapi/boom')
-const fs = require('fs')
-const chalk = require('chalk')
-const FileType = require('file-type')
-const path = require('path')
-const axios = require('axios')
-const { handleMessages, handleGroupParticipantUpdate, handleStatus } = require('./main');
-const { handleAntibotDetection } = require('./commands/antibot');
-const { startWebGUI, initAdminConfig, getBotManager, setMessageHandlers } = require('./lib/webgui');
-const PhoneNumber = require('awesome-phonenumber')
-const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('./lib/exif')
-const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetch, await, sleep, reSize } = require('./lib/myfunc')
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    DisconnectReason,
-    fetchLatestBaileysVersion,
-    generateForwardMessageContent,
-    prepareWAMessageMedia,
-    generateWAMessageFromContent,
-    generateMessageID,
-    downloadContentFromMessage,
-    jidDecode,
-    proto,
-    jidNormalizedUser,
-    makeCacheableSignalKeyStore,
-    delay
-} = require("@whiskeysockets/baileys")
-const NodeCache = require("node-cache")
-const pino = require("pino")
-const readline = require("readline")
-const { parsePhoneNumber } = require("libphonenumber-js")
-const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics')
-const { rmSync, existsSync } = require('fs')
-const { join } = require('path')
+import startSock, { onNewSock } from "./connection.js";
+import { startReminderScheduler } from "./utils/reminderScheduler.js";
+import getDate from "./utils/date.js";
+import { normalizeJID } from "./utils/lid.js";
+import adminRouter from "./routes/admin.js";
+import messageQueue from "./queue/messageQueue.js";
+import {
+  pushLog,
+  subscribe as subscribeAdminEvents,
+  getLogs,
+  getActivity,
+} from "./notify/adminEvents.js";
 
-// Import lightweight store
-const store = require('./lib/lightweight_store')
+// ── Console interceptor — feeds log ring buffer + deduplication ──────────────
+const _log = console.log.bind(console);
+const _info = console.info.bind(console);
+const _warn = console.warn.bind(console);
+const _error = console.error.bind(console);
 
-// Initialize store
-store.readFromFile()
-const settings = require('./settings')
-setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
+const _SESSION_SPAM = ["Closing session:", "Removing old closed session:"];
 
-// Memory optimization - Force garbage collection if available
-setInterval(() => {
-    if (global.gc) {
-        global.gc()
-        console.log('🧹 Garbage collection completed')
-    }
-}, 60_000) // every 1 minute
-
-// Memory monitoring - Restart if RAM gets too high
-setInterval(() => {
-    const used = process.memoryUsage().rss / 1024 / 1024
-    if (used > 400) {
-        console.log('⚠️ RAM too high (>400MB), restarting bot...')
-        process.exit(1) // Panel will auto-restart
-    }
-}, 30_000) // check every 30 seconds
-
-let phoneNumber = "911234567890"
-let owner = []
-try {
-    owner = JSON.parse(fs.readFileSync('./data/owner.json'))
-} catch (e) {
-    console.log('⚠️ owner.json not found, using default')
-    owner = ["910000000000", "917023951514"]
-    // Create default owner.json
-    fs.writeFileSync('./data/owner.json', JSON.stringify(owner))
+// Suppress "Credentials saved to MongoDB" within 10s of startup (creds flush storm)
+let _startupTime = Date.now();
+function _suppressStartupNoise(msg) {
+  if (msg === "💾 Credentials saved to MongoDB" && Date.now() - _startupTime < 10000) return true;
+  return false;
 }
 
-global.botname = "topai"
-global.themeemoji = "•"
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
-const useMobile = process.argv.includes("--mobile")
+console.log = (...a) => {
+  const s = String(a[0]);
+  if (_suppressStartupNoise(s)) return;
+  _log(...a);
+  pushLog("info", ...a);
+};
+console.info = (...a) => {
+  if (_SESSION_SPAM.some((s) => String(a[0]).startsWith(s))) return;
+  _info(...a);
+  pushLog("info", ...a);
+};
+console.warn = (...a) => {
+  _warn(...a);
+  pushLog("warn", ...a);
+};
+console.error = (...a) => {
+  _error(...a);
+  pushLog("error", ...a);
+};
 
-// Initialize admin config for web GUI
-initAdminConfig(true)
+import cors from "cors";
+import express from "express";
+import session from "express-session";
+import MongoStore from "connect-mongo";
+import bodyParser from "body-parser";
+import { WebSocketServer, WebSocket } from "ws";
+import path from "path";
+import { fileURLToPath } from "url";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
-// Web GUI port (can be configured via env)
-const WEB_GUI_PORT = process.env.WEB_GUI_PORT || 3000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Get bot manager instance
-const botManager = getBotManager();
+const app = express();
 
-// Set message handlers for all sessions
-setMessageHandlers({
-    handleMessages,
-    handleGroupParticipantUpdate,
-    handleStatus,
-    handleAntibotDetection
-});
+// The dashboard and the QR page are served by this server (same origin; the vite dev server proxies /api),
+// so no CORS headers are needed. This used to answer "Access-Control-Allow-Origin: *" with credentials to
+// every site. CORS_ORIGINS (comma-separated) is an explicit opt-in for anything else.
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins.length ? corsOrigins : false,
+    credentials: true,
+    optionsSuccessStatus: 200,
+  }),
+);
 
-// Start web GUI server immediately
-startWebGUI(WEB_GUI_PORT);
-console.log(chalk.green(`🌐 Web GUI started on port ${WEB_GUI_PORT}`));
-
-// Only create readline interface if we're in an interactive environment
-const rl = process.stdin.isTTY ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null
-const question = (text) => {
-    if (rl) {
-        return new Promise((resolve) => rl.question(text, resolve))
-    } else {
-        // In non-interactive environment, use ownerNumber from settings
-        return Promise.resolve(settings.ownerNumber || phoneNumber)
-    }
+if (!process.env.SESSION_SECRET) {
+  console.error(
+    "FATAL: SESSION_SECRET environment variable is not set. Cannot run application securely.",
+  );
+  process.exit(1);
 }
 
-// Auto-start owner sessions from config
-botManager.on('sessionConnected', (number, sock) => {
-    console.log(chalk.green(`✅ Session ${number} connected and ready`));
+if (!process.env.ADMIN_PASSWORD) {
+  console.warn("ADMIN_PASSWORD is not set — password login is disabled (Google login only).");
+}
+
+// Behind nginx: req.ip must be the client IP (login rate limit keys on it). Keep the app port
+// bound to localhost, otherwise X-Forwarded-For can be spoofed by direct connections.
+app.set("trust proxy", 1);
+
+const sessionMiddleware = session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  rolling: true, // every visit pushes the 30-day expiry forward
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_KEY,
+    ttl: 30 * 24 * 60 * 60,
+    touchAfter: 60 * 60,
+  }),
+  // "auto": Secure flag when the request came in over HTTPS (nginx sends X-Forwarded-Proto), plain over local HTTP
+  cookie: { secure: "auto", httpOnly: true, sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 },
+});
+app.use(sessionMiddleware);
+
+// ── Passport / Google OAuth ────────────────────────────────────────────────────
+const baseUrl = (process.env.HOST_URL || "http://localhost:8000").replace(/\/$/, "");
+const googleAuthEnabled = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+if (googleAuthEnabled) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: `${baseUrl}/auth/google/callback`,
+      },
+      (_accessToken, _refreshToken, profile, done) => done(null, profile),
+    ),
+  );
+} else {
+  console.log("Google OAuth disabled — GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set.");
+}
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+app.use(passport.initialize());
+app.use(passport.session());
+app.locals.googleAuthEnabled = googleAuthEnabled;
+
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    maxAge: "1d",
+    etag: false,
+  }),
+);
+
+// Serve the React dashboard build (public/app/) at /admin
+app.use(
+  "/admin",
+  express.static(path.join(__dirname, "public", "app"), { maxAge: "1d", etag: false }),
+);
+
+app.set("views", path.join(__dirname, "./public"));
+app.set("view engine", "ejs");
+
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+const port = process.env.PORT || 8000;
+
+app.get("/", (_req, res) => {
+  res.render("index");
 });
 
-// Handle process cleanup
-process.on('SIGINT', async () => {
-    console.log(chalk.yellow('\n🛑 Shutting down...'));
+// Liveness probe for the Docker healthcheck / build.sh health (process is up; says nothing about WhatsApp).
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+app.use("/", adminRouter);
+
+// SPA catch-all: any /admin/* path that wasn't handled above → serve React index.html
+const reactIndex = path.join(__dirname, "public", "app", "index.html");
+app.get("/admin", (_req, res) => res.sendFile(reactIndex));
+app.get("/admin/*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(reactIndex);
+});
+
+const server = app.listen(port, () => {
+  const mem = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+  _log(`\n${"═".repeat(50)}`);
+  _log(`  Eva Bot  ·  ${getDate()}`);
+  _log(`  Port: ${port}  ·  Heap: ${mem}MB`);
+  _log(`${"═".repeat(50)}\n`);
+  startServer();
+});
+
+app.on("error", (error) => {
+  console.error("Web-server error:", error.message);
+});
+
+const wss = new WebSocketServer({
+  server,
+  maxPayload: 10 * 1024 * 1024,
+  perMessageDeflate: true,
+});
+
+// ── Bot connection state ───────────────────────────────────────────────────────
+// Persists across sock reconnections via the onNewSock hook in connection.js
+let botConnected = false;
+let lastQR = null; // Last QR code received; replayed to late-joining browser clients
+let lastQRTimer = null; // Timer to clear lastQR after it expires (~60 s)
+
+// Only QR + connection status are public (the QR login page needs them). Everything else
+// (logs, activity, sending) is admin-only: the socket is tied to the admin session cookie.
+const PUBLIC_WS_EVENTS = new Set(["qr", "status"]);
+
+function broadcast(payload) {
+  const msg = JSON.stringify(payload);
+  const isPublic = PUBLIC_WS_EVENTS.has(payload.type);
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && (isPublic || client.isAdmin)) client.send(msg);
+  });
+}
+
+// Runs the express-session middleware on the upgrade request to read the admin flag.
+const isAdminRequest = (req) =>
+  new Promise((resolve) =>
+    sessionMiddleware(req, {}, () => resolve(req.session?.isAdmin === true)),
+  ).catch(() => false);
+
+// ── Called for every new sock — including reconnects ─────────────────────────
+// This is the fix for the stale-sock bug: we always attach our listener to
+// whichever sock is currently live, and always keep app.locals.sock current.
+function handleNewSock(sock) {
+  app.locals.sock = sock; // always up-to-date reference for admin routes
+
+  sock.ev.on("connection.update", (update) => {
+    const { qr, isOnline, connection } = update;
+
+    if (qr) {
+      botConnected = false;
+      lastQR = qr;
+      // QR codes expire (~60 s); clear stored copy so stale QR isn't replayed
+      clearTimeout(lastQRTimer);
+      lastQRTimer = setTimeout(() => {
+        lastQR = null;
+      }, 60_000);
+      broadcast({ type: "qr", qr });
+    }
+
+    if (isOnline || connection === "open") {
+      botConnected = true;
+      lastQR = null;
+      clearTimeout(lastQRTimer);
+      broadcast({ type: "status", status: "connected" });
+    }
+
+    if (connection === "close") {
+      botConnected = false;
+      broadcast({ type: "status", status: "disconnected" });
+    }
+  });
+}
+
+// Register hook before calling startSock so it fires for the very first sock too
+onNewSock(handleNewSock);
+
+// Forward admin events (logs, activity) to all connected WS clients
+subscribeAdminEvents((event) => broadcast(event));
+
+// Expose startSock so admin routes can trigger a reconnect without restarting the process
+app.locals.reconnect = () => startSock("manual-reconnect");
+
+// ── WebSocket server ──────────────────────────────────────────────────────────
+wss.on("connection", async (ws, req) => {
+  // Browsers always send Origin; reject cross-site pages trying to open this socket.
+  const origin = req.headers.origin;
+  if (origin) {
+    let sameHost = false;
+    try {
+      sameHost = new URL(origin).host === req.headers.host;
+    } catch {
+      /* malformed origin */
+    }
+    if (!sameHost) return ws.close(1008, "Forbidden origin");
+  }
+
+  ws.on("error", () => {}); // covers the gap while the session is looked up; real handler is attached below
+  ws.isAdmin = await isAdminRequest(req);
+  if (ws.readyState !== WebSocket.OPEN) return;
+
+  // Tell newly connected browser clients the current state immediately.
+  // Also check sock.user as a live fallback in case botConnected is stale.
+  const isConnected = botConnected || app.locals.sock?.user != null;
+  if (isConnected) {
+    botConnected = true; // sync flag
+    ws.send(JSON.stringify({ type: "status", status: "connected" }));
+  } else if (lastQR) {
+    // Browser missed the QR broadcast — replay the stored copy
+    ws.send(JSON.stringify({ type: "qr", qr: lastQR }));
+  }
+
+  // Replay recent logs + activity to admins only
+  if (ws.isAdmin) {
+    ws.send(JSON.stringify({ type: "log_snapshot", logs: getLogs(100) }));
+    ws.send(JSON.stringify({ type: "activity_snapshot", activity: getActivity() }));
+  }
+
+  const heartbeat = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
+  }, 30_000);
+
+  ws.on("pong", () => {});
+
+  ws.on("message", async (raw) => {
+    if (!ws.isAdmin) {
+      ws.send(JSON.stringify({ type: "error", error: "Unauthorized" }));
+      return;
+    }
+    try {
+      const { to, message } = JSON.parse(raw);
+      if (!to || !message) {
+        ws.send(JSON.stringify({ type: "error", error: "Invalid request" }));
+        return;
+      }
+      if (message.length > 4096) {
+        ws.send(JSON.stringify({ type: "error", error: "Message too long" }));
+        return;
+      }
+      // Always use the live sock reference (fixes stale-sock bug for messages too)
+      const sock = app.locals.sock;
+      const jid = await normalizeJID(sock, to);
+      await messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0);
+      console.log("Message sent to", to, ":", message);
+      ws.send(JSON.stringify({ type: "success", success: "Message sent" }));
+    } catch (err) {
+      console.error("Error handling WebSocket message:", err);
+      ws.send(JSON.stringify({ type: "error", error: "Failed to send message" }));
+    }
+  });
+
+  ws.on("close", () => clearInterval(heartbeat));
+  ws.on("error", (err) => {
+    console.error("WebSocket error:", err);
+    clearInterval(heartbeat);
+  });
+});
+
+// ── Bot start ─────────────────────────────────────────────────────────────────
+async function startServer() {
+  await startSock("start");
+  startReminderScheduler();
+  // handleNewSock() is called by the onNewSock hook inside connection.js,
+  // so app.locals.sock and connection.update listener are both set up there.
+
+  app.post("/send", async (req, res) => {
+    const { to, message } = req.body;
+    if (!to || !message) {
+      return res.status(400).send({ message: "Invalid request" });
+    }
+
+    try {
+      const sock = app.locals.sock; // live reference
+      if (Array.isArray(to)) {
+        const jids = await Promise.all(to.map((r) => normalizeJID(sock, r)));
+        await Promise.all(
+          jids.map((jid) =>
+            messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0),
+          ),
+        );
+        console.log("Message queued for multiple recipients");
+        return res.send({ message: "Messages queued" });
+      } else {
+        const recipientJid = await normalizeJID(sock, to);
+        await messageQueue.enqueue(
+          recipientJid,
+          () => sock.sendMessage(recipientJid, { text: message }),
+          0,
+        );
+        console.log("Message queued for:", to);
+        return res.send({ message: "Message queued" });
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      return res.status(500).send({ message: "Failed to send message" });
+    }
+  });
+}
+
+process.on("unhandledRejection", (reason, p) => {
+  console.error("Unhandled Rejection at: ", p, "reason:", reason);
+});
+
+process.on("uncaughtException", function (err) {
+  console.error("Uncaught Exception:", err);
+  gracefulShutdown("UNCAUGHT_EXCEPTION");
+});
+
+function gracefulShutdown(signal) {
+  console.log(`\n🔄 Received ${signal}. Starting graceful shutdown...`);
+  // End WA socket first so its ws "close" handler flushes pending session
+  // keys to Mongo — skip this and a crash mid-write leaves a stale session,
+  // which shows up next boot as Bad MAC until the ratchet resyncs.
+  try {
+    app.locals.sock?.end(undefined);
+  } catch (err) {
+    console.error("Error ending WA socket during shutdown:", err.message);
+  }
+  server.close(() => {
+    console.log("✅ HTTP server closed");
+    wss.clients.forEach((client) => client.close());
+    console.log("✅ Graceful shutdown completed");
     process.exit(0);
-});
+  });
+  setTimeout(() => {
+    console.error("❌ Forced shutdown due to timeout");
+    process.exit(1);
+  }, 10_000);
+}
 
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err)
-})
-
-process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err)
-})
-
-let file = require.resolve(__filename)
-fs.watchFile(file, () => {
-    fs.unwatchFile(file)
-    console.log(chalk.redBright(`Update ${__filename}`))
-    delete require.cache[file]
-    require(file)
-})
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
