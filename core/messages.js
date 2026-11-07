@@ -42,15 +42,20 @@ const getDisabledGlobally = async () => {
   return _disabledCache.list;
 };
 
-// These will be used for permission checks
-const myNumber = [
-  process.env.MY_NUMBER.split(",")[0] + "@s.whatsapp.net",
-  process.env.MY_NUMBER.split(",")[1] + "@lid",
-];
-const botNumber = [
-  process.env.BOT_NUMBER.split(",")[0] + "@s.whatsapp.net",
-  process.env.BOT_NUMBER.split(",")[1] + "@lid",
-];
+// These will be used for permission checks. Required Render variables are
+// validated here with an actionable message before constructing JIDs.
+for (const name of ["MY_NUMBER", "BOT_NUMBER"]) {
+  if (!process.env[name]?.trim()) {
+    throw new Error(`${name} is required. Add it in Render Environment settings.`);
+  }
+}
+
+const ownerNumbers = process.env.MY_NUMBER.split(",").map((number) => number.trim()).filter(Boolean);
+const botNumbers = process.env.BOT_NUMBER.split(",").map((number) => number.trim()).filter(Boolean);
+const myNumber = ownerNumbers.map((number) => `${number}@s.whatsapp.net`);
+const botNumber = botNumbers.map((number) => `${number}@s.whatsapp.net`);
+myNumber.push(...ownerNumbers.map((number) => `${number}@lid`));
+botNumber.push(...botNumbers.map((number) => `${number}@lid`));
 
 // Cached tag sticker - loaded once at startup
 let _tagStickerBuffer = null;
