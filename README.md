@@ -226,6 +226,15 @@ Run with `bun scripts/<name>.js` (they use the same `.env`).
 - Serve the dashboard over HTTPS (`./build.sh ssl`) and keep the container bound to localhost.
 - This bot automates a WhatsApp account through an unofficial API. That can violate WhatsApp's terms and the account may be banned, so use a dedicated number, not your personal one.
 
+## Deploy on Render
+
+1. Create a **MongoDB Atlas** cluster and copy its connection string.
+2. In Render, create a **Blueprint** from this repository or select the Dockerfile service manually.
+3. Set `MONGODB_KEY` to the complete Atlas URI, including a username and password (usually `mongodb+srv://...`).
+4. Set `MY_NUMBER`, `BOT_NUMBER`, `ADMIN_PASSWORD`, and any other required values in Render Environment.
+5. Leave the service port set to `8080` and use `/health` as the health check path.
+6. Redeploy after changing environment variables. A URI is required before the application can start; Render cannot deploy an empty `MONGODB_KEY`.
+
 ## Deploy on Koyeb
 
 Koyeb builds the repo's `Dockerfile`, which already includes Bun, ffmpeg and yt-dlp.

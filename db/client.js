@@ -3,7 +3,14 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 
 dotenv.config();
 
-const uri = process.env.MONGODB_KEY;
+const uri = process.env.MONGODB_KEY?.trim();
+if (!uri) {
+  throw new Error("MONGODB_KEY is required. Add a valid MongoDB connection string in Render Environment settings.");
+}
+if (!/^mongodb(?:\+srv)?:\/\//.test(uri)) {
+  throw new Error("MONGODB_KEY must start with mongodb:// or mongodb+srv://");
+}
+
 const mdClient = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
