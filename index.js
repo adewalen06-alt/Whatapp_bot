@@ -156,7 +156,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 const port = process.env.PORT || 8000;
 
 app.get("/", (_req, res) => {
-  res.render("index");
+  res.redirect("/admin/");
 });
 
 // Liveness probe for the Docker healthcheck / build.sh health (process is up; says nothing about WhatsApp).
