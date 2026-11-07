@@ -16,11 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Bust the Docker cache whenever a new yt-dlp release ships. Without this, the RUN
-# layer below stays cached across rebuilds and yt-dlp freezes at its first-built
-# version — which modern YouTube rejects ("Requested format is not available").
-ADD https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest /tmp/yt-dlp-latest.json
-RUN wget -q https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+# Download the binary directly. Querying GitHub's API during Docker builds can
+# be rate-limited (403), so this layer has no API dependency.
+RUN wget -q --retry-connrefused --tries=3 \
+    https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
     -O /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp
 
 ENV YTDLP_PATH=/usr/local/bin/yt-dlp
