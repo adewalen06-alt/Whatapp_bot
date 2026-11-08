@@ -7,7 +7,7 @@ import { escapeHtml } from "../notify/telegram.js";
 import { readFileEfficiently } from "../utils/file.js";
 import { getGroupMeta, setGroupMeta, delGroupMeta } from "../cache/redisCache.js";
 
-const prefix = process.env.PREFIX;
+const prefix = process.env.PREFIX || "-";
 import { isModeratorJid } from "../utils/roles.js"; // moderators come from MODERATORS only (see utils/roles.js)
 import getGroupAdmins from "../utils/groupAdmins.js";
 import { extractPhoneNumber, getPNFromLID, isLID } from "../utils/lid.js";
