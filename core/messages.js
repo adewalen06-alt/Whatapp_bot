@@ -229,9 +229,6 @@ const getCommand = async (sock, msg, cache) => {
       .join(" ");
     const command = body.slice(1).trim().split(/ +/).shift().toLowerCase();
     const args = body.trim().split(/ +/).slice(1);
-    console.log(
-      `[DEBUG] prefix="${prefix}" body="${body}" isCmd=${isCmd} command="${command}" from=${from} fromMe=${msg.key.fromMe}`,
-    );
     //-------------------------------------------------------------------------------------------------------------//
     const isGroup = from.endsWith("@g.us");
     const senderJid = isGroup ? msg.key.participant : msg.key.remoteJid;
@@ -555,10 +552,7 @@ const getCommand = async (sock, msg, cache) => {
       }
     }
     //---------------------------------------------------NO-CMD----------------------------------------------------//
-    if (!isCmd) {
-      console.log(`[DEBUG] Not a command, returning early. body="${body}" prefix="${prefix}"`);
-      return;
-    }
+    if (!isCmd) return;
     //-------------------------------------------------------------------------------------------------------------//
     // Rate limit: 3 calls per 5s per user per command (owners exempt)
     // if (!isOwner) {
@@ -571,9 +565,6 @@ const getCommand = async (sock, msg, cache) => {
       commandsMembers[command] ||
       commandsAdmins[command] ||
       commandsOwners[command]
-    );
-    console.log(
-      `[DEBUG] isKnown=${isKnown} command="${command}" public=${!!commandsPublic[command]} members=${!!commandsMembers[command]} admins=${!!commandsAdmins[command]} owners=${!!commandsOwners[command]}`,
     );
     // Unknown words after the prefix ("- yes", "-5") are usually normal chat: stay silent unless it looks like a typo
     sock.readMessages([msg.key]).catch(() => {});
