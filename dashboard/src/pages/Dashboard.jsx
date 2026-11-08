@@ -97,7 +97,7 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState([]);
-  const wsStatus = useWebSocket();
+  const { status: wsStatus } = useWebSocket();
 
   useEffect(() => {
     Promise.all([getStats(), getAnalytics(), getActivity()])

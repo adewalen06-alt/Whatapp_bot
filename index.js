@@ -382,63 +382,6 @@ wss.on("connection", async (ws, req) => {
   });
 });
 
-// ── Bot management API ───────────────────────────────────────────────────────
-
-// List all bots
-app.get("/api/bots", async (_req, res) => {
-  res.json({ bots: botManager.getAll() });
-});
-
-// Register a new bot
-app.post("/api/bots", async (req, res) => {
-  const { botId, botNumber, myNumber } = req.body;
-  if (!botId) {
-    return res.status(400).json({ error: "botId is required" });
-  }
-  if (botManager.has(botId)) {
-    return res.status(409).json({ error: `Bot ${botId} already exists` });
-  }
-  botManager.register(botId, { botNumber, myNumber });
-  try {
-    await startBot(botId, "api");
-    res.json({ success: true, botId });
-  } catch (err) {
-    botManager.unregister(botId);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Remove a bot
-app.delete("/api/bots/:botId", async (req, res) => {
-  const { botId } = req.params;
-  if (botId === "default") {
-    return res.status(400).json({ error: "Cannot remove default bot" });
-  }
-  await stopBot(botId);
-  res.json({ success: true, botId });
-});
-
-// Get bot status
-app.get("/api/bots/:botId", (_req, res) => {
-  const bot = botManager.get(_req.params.botId);
-  if (!bot) return res.status(404).json({ error: "Bot not found" });
-  res.json({
-    botId: _req.params.botId,
-    status: botManager.getStatus(_req.params.botId),
-    qr: botManager.getQR(_req.params.botId),
-    botNumber: bot.botNumber,
-    myNumber: bot.myNumber,
-    metrics: botManager.getAll().find((b) => b.botId === _req.params.botId)?.metrics,
-  });
-});
-
-// Get QR code for a bot
-app.get("/api/bots/:botId/qr", (_req, res) => {
-  const qr = botManager.getQR(_req.params.botId);
-  const status = botManager.getStatus(_req.params.botId);
-  res.json({ botId: _req.params.botId, qr, status });
-});
-
 // ── Bot start ─────────────────────────────────────────────────────────────────
 async function startServer() {
   await mongoReady;

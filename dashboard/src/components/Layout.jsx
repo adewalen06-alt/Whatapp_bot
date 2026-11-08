@@ -14,6 +14,7 @@ const NAV = [
   { to: '/analytics', icon: '📊', label: 'Analytics' },
   { to: '/dm', icon: '✉️', label: 'Direct Message' },
   { to: '/broadcast', icon: '📢', label: 'Broadcast' },
+  { to: '/bots', icon: '🤖', label: 'Bots' },
   { to: '/logs', icon: '📋', label: 'Logs' },
   { to: '/health', icon: '💚', label: 'Bot Health' },
   { to: '/settings', icon: '⚙', label: 'Settings' },
@@ -32,7 +33,7 @@ export default function Layout({ children }) {
   const { setAuth } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const wsStatus = useWebSocket();
+  const { status: wsStatus, connectedBots } = useWebSocket();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -76,6 +77,21 @@ export default function Layout({ children }) {
             <p className='text-[0.7rem] text-muted mt-0.5'>{stats?.botNumber || 'Loading…'}</p>
           </div>
         </div>
+
+        {/* Connected bots indicator */}
+        {connectedBots.length > 0 && (
+          <div className='w-full px-2 py-1.5 bg-success/10 border border-success/20 rounded-[10px] mb-2'>
+            <div className='flex items-center gap-2 text-[0.75rem] text-success font-medium'>
+              <span className='size-1.5 rounded-full bg-success animate-glow shrink-0'></span>
+              <span>{connectedBots.length} bot{connectedBots.length > 1 ? 's' : ''} online</span>
+              {connectedBots.map(([botId, botNumber]) => (
+                <span key={botId} className='ml-2 text-[0.68rem] text-muted'>
+                  {botId}: {botNumber || '—'}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <nav className='flex flex-row md:flex-col gap-1 md:gap-0.5 md:flex-1 overflow-x-auto md:overflow-visible'>
           {NAV.map(({ to, icon, label, end }) => (

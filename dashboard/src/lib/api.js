@@ -77,6 +77,16 @@ export const getActivity = () => api.get('/api/admin/activity');
 // Command usage stats
 export const getCommandStats = () => api.get('/api/admin/command-stats');
 
+// ── Multi-bot management ──
+export const getBots = () => api.get('/api/bots');
+export const createBot = (botId, botNumber, myNumber) =>
+  api.post('/api/bots', { botId, botNumber, myNumber });
+export const removeBot = (botId) => api.delete(`/api/bots/${encodeURIComponent(botId)}`);
+export const getBot = (botId) => api.get(`/api/bots/${encodeURIComponent(botId)}`);
+export const getBotQR = (botId) => api.get(`/api/bots/${encodeURIComponent(botId)}/qr`);
+export const startBot = (botId) => api.post('/api/bots', { botId, action: 'start' });
+export const stopBot = (botId) => api.post('/api/bots', { botId, action: 'stop' });
+
 // Direct message
 export const sendDirect = (jid, message) => api.post('/api/admin/dm', { jid, message });
 

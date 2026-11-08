@@ -18,6 +18,7 @@ import {
   isAllowedGoogleProfile,
 } from "../utils/adminAuth.js";
 import { escapeHtml } from "../notify/telegram.js";
+import { botManager, startBot, stopBot } from "../connection.js";
 
 const router = Router();
 
@@ -689,6 +690,70 @@ router.post("/api/admin/dm", requireAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── API: Multi-bot management ──────────────────────────────────────────────────
+router.get("/api/bots", requireAdmin, (_req, res) => {
+  res.json({ bots: botManager.getAll() });
+});
+
+router.post("/api/bots", requireAdmin, async (req, res) => {
+  const { botId, botNumber, myNumber, action } = req.body;
+  if (action === 'start' || action === 'stop') {
+    if (!botId) return res.status(400).json({ error: "botId is required" });
+    try {
+      if (action === 'start') {
+        await startBot(botId, "api");
+      } else {
+        await stopBot(botId);
+      }
+      res.json({ ok: true, botId, action });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+    return;
+  }
+  if (!botId) return res.status(400).json({ error: "botId is required" });
+  if (botManager.has(botId)) {
+    return res.status(409).json({ error: `Bot ${botId} already exists` });
+  }
+  botManager.register(botId, { botNumber, myNumber });
+  try {
+    await startBot(botId, "api");
+    res.json({ ok: true, botId });
+  } catch (err) {
+    botManager.unregister(botId);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/api/bots/:botId", requireAdmin, async (req, res) => {
+  const { botId } = req.params;
+  if (botId === "default") {
+    return res.status(400).json({ error: "Cannot remove default bot" });
+  }
+  await stopBot(botId);
+  res.json({ ok: true, botId });
+});
+
+router.get("/api/bots/:botId", requireAdmin, (_req, res) => {
+  const botId = _req.params.botId;
+  const bot = botManager.get(botId);
+  if (!bot) return res.status(404).json({ error: "Bot not found" });
+  res.json({
+    botId,
+    status: botManager.getStatus(botId),
+    qr: botManager.getQR(botId),
+    botNumber: bot.botNumber,
+    myNumber: bot.myNumber,
+  });
+});
+
+router.get("/api/bots/:botId/qr", requireAdmin, (_req, res) => {
+  const botId = _req.params.botId;
+  const qr = botManager.getQR(botId);
+  const status = botManager.getStatus(botId);
+  res.json({ botId, qr, status });
 });
 
 export default router;

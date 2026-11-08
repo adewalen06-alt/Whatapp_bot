@@ -20,6 +20,9 @@ export function removeWsListener(type, fn) {
 let reconnectTimer = null;
 let current = null;
 
+// Per-bot status tracking: botId -> { status, botNumber }
+const botInfo = new Map();
+
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const ws = new WebSocket(`${proto}//${location.host}`);
@@ -37,12 +40,36 @@ function connect() {
   ws.onmessage = (evt) => {
     try {
       const data = JSON.parse(evt.data);
-      if (data.type === 'status') {
-        // Server broadcasts both 'connected' and 'disconnected' (bot connection
-        // dropping while the browser<->server socket stays open) — reflect both.
-        emit('_status', { status: data.status === 'connected' ? 'connected' : 'disconnected' });
+
+      // Track per-bot status
+      if (data.type === 'status' && data.botId) {
+        const existing = botInfo.get(data.botId) || {};
+        botInfo.set(data.botId, { ...existing, status: data.status });
+        // Emit a combined status: connected if ANY bot is connected
+        const anyConnected = [...botInfo.values()].some((b) => b.status === 'connected');
+        emit('_status', { status: anyConnected ? 'connected' : 'disconnected' });
+        // Also emit per-bot status for listeners that want it
+        emit('_bot_status', { botId: data.botId, status: data.status });
+      } else if (data.type === 'bots_snapshot') {
+        // Initial snapshot: populate all bot info
+        botInfo.clear();
+        for (const b of data.bots || []) {
+          botInfo.set(b.botId, {
+            status: b.status,
+            botNumber: b.botNumber?.[0] || null,
+            myNumber: b.myNumber?.[0] || null,
+          });
+        }
+        const anyConnected = [...botInfo.values()].some((b) => b.status === 'connected');
+        emit('_status', { status: anyConnected ? 'connected' : 'disconnected' });
+        emit('bots_snapshot', data);
+      } else {
+        if (data.type === 'status') {
+          // Legacy single-bot status (no botId)
+          emit('_status', { status: data.status === 'connected' ? 'connected' : 'disconnected' });
+        }
+        emit(data.type, data);
       }
-      emit(data.type, data);
     } catch {}
   };
 }
@@ -53,6 +80,20 @@ export function reconnectWs() {
   const old = current;
   connect();
   old?.close();
+}
+
+export function getBotStatus(botId = 'default') {
+  return botInfo.get(botId)?.status || 'disconnected';
+}
+
+export function getAllBotStatus() {
+  return Object.fromEntries([...botInfo.entries()].map(([k, v]) => [k, v.status]));
+}
+
+export function getConnectedBots() {
+  return [...botInfo.entries()]
+    .filter(([, b]) => b.status === 'connected')
+    .map(([botId, b]) => [botId, b.botNumber]);
 }
 
 connect();

@@ -12,6 +12,7 @@ import Health from './pages/Health.jsx';
 import Logs from './pages/Logs.jsx';
 import DirectMessage from './pages/DirectMessage.jsx';
 import Settings from './pages/Settings.jsx';
+import Bots from './pages/Bots.jsx';
 import { Spinner } from './components/ui.jsx';
 
 // ── Contexts ───────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export default function App() {
                       <Route path='members' element={<Members />} />
                       <Route path='analytics' element={<Analytics />} />
                       <Route path='broadcast' element={<Broadcast />} />
+                      <Route path='bots' element={<Bots />} />
                       <Route path='health' element={<Health />} />
                       <Route path='logs' element={<Logs />} />
                       <Route path='dm' element={<DirectMessage />} />
