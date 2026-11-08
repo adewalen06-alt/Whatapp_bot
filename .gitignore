@@ -30,3 +30,6 @@ performance-metrics.json
 .github/copilot-instructions.md
 CLAUDE.md
 .claude/settings.local.json
+
+# Old Knightbot-MD-main cache (not part of this project)
+cache/Knightbot-MD-main/
