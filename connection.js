@@ -1,6 +1,6 @@
 import { createSocket } from "./core/socket.js";
 import { createEvents } from "./core/events.js";
-import { botManager } from "./core/botManager.js";
+import { botManager, getBotCache } from "./core/botManager.js";
 
 let connectionAttempts = new Map();
 const MAX_CONNECTION_ATTEMPTS = 5;
@@ -47,7 +47,8 @@ export const startBot = async (botId = "default", reason = "initial") => {
       // Notify index.js so it can track the live sock reference
       if (global._onNewBot) global._onNewBot(botId, sock);
 
-      createEvents(sock, startBot, null, botId);
+      const botCache = getBotCache(botId);
+      createEvents(sock, startBot, botCache, botId);
       connectionAttempts.set(botId, 0);
       botManager.setStatus(botId, "connected");
       console.log(`[${botId}] ✅ Socket connection established successfully`);
