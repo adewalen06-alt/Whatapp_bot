@@ -38,13 +38,13 @@ const events = async (sock, startSock, cache) => {
       if (event["messages.upsert"]) {
         const { type, messages } = event["messages.upsert"];
         if (type === "notify") {
-          const botJid = sock.user?.id;
+          const botJid = sock.user?.id?.replace(/:\d+@/, "@");
           const validMessages = messages.filter(
             (msg) =>
               msg &&
               msg.message &&
               msg.key?.remoteJid &&
-              (!msg.key.fromMe || msg.key.remoteJid === botJid) &&
+              (!msg.key.fromMe || msg.key.remoteJid.replace(/:\d+@/, "@") === botJid) &&
               Object.keys(msg.message).length > 0,
           );
 
