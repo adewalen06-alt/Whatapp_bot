@@ -263,6 +263,8 @@ router.get("/api/admin/analytics", requireAdmin, async (req, res) => {
 router.get("/api/admin/bot/health", requireAdmin, (req, res) => {
   try {
     const mem = process.memoryUsage();
+    const botId = req.query.botId || "default";
+    const sock = botManager.getSock(botId);
     res.json({
       uptime: Math.floor(process.uptime()),
       memory: {
@@ -271,7 +273,8 @@ router.get("/api/admin/bot/health", requireAdmin, (req, res) => {
         rss: mem.rss,
         external: mem.external,
       },
-      connected: !!req.app.locals.sock?.user,
+      connected: !!sock?.user,
+      botId,
       nodeVersion: process.version,
       pid: process.pid,
       platform: process.platform,
@@ -386,11 +389,11 @@ router.post("/api/admin/logout-bot", requireAdmin, async (req, res) => {
 
 // ── API: Pairing code (admin dashboard - requires auth) ───────────────────────
 router.post("/api/admin/request-pair", requireAdmin, async (req, res) => {
-  const { phoneNumber } = req.body;
+  const { phoneNumber, botId = "default" } = req.body;
   if (!phoneNumber) return res.status(400).json({ error: "Phone number is required." });
 
-  const sock = req.app.locals.sock;
-  if (!sock) return res.status(503).json({ error: "Bot socket is not ready." });
+  const sock = botManager.getSock(botId);
+  if (!sock) return res.status(503).json({ error: `Bot ${botId} socket is not ready.` });
 
   if (sock.authState?.creds?.registered) {
     return res
@@ -404,7 +407,7 @@ router.post("/api/admin/request-pair", requireAdmin, async (req, res) => {
     if (clean.length < 7) return res.status(400).json({ error: "Invalid phone number." });
 
     const code = await sock.requestPairingCode(clean);
-    res.json({ ok: true, code });
+    res.json({ ok: true, code, botId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

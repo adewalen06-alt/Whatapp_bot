@@ -208,6 +208,10 @@ function handleNewBot(botId, sock) {
   botManager.setSock(botId, sock);
   app.locals.botManager = botManager;
 
+  // Backward compat: keep app.locals.sock pointing to the default bot's socket
+  // so existing endpoints (health, pairing, DM, etc.) still work.
+  if (botId === "default") app.locals.sock = sock;
+
   sock.ev.on("connection.update", (update) => {
     const { qr, isOnline, connection } = update;
 
@@ -226,6 +230,10 @@ function handleNewBot(botId, sock) {
     if (connection === "close") {
       botManager.setStatus(botId, "disconnected");
       broadcast({ type: "status", botId, status: "disconnected" });
+      // Clear app.locals.sock if default bot disconnected
+      if (botId === "default" && app.locals.sock === sock) {
+        app.locals.sock = null;
+      }
     }
   });
 }

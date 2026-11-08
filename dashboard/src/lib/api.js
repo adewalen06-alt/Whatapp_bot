@@ -47,14 +47,15 @@ export const memberAction = (jid, action) =>
 export const getAnalytics = () => api.get('/api/admin/analytics');
 
 // Health
-export const getHealth = () => api.get('/api/admin/bot/health');
+export const getHealth = (botId = "default") => api.get(`/api/admin/bot/health?botId=${encodeURIComponent(botId)}`);
 
 // Broadcast
 export const broadcast = (message, targetJids) =>
   api.post('/api/admin/broadcast', { message, targetJids });
 
 // Pairing code login
-export const requestPair = (phoneNumber) => api.post('/api/admin/request-pair', { phoneNumber });
+export const requestPair = (phoneNumber, botId = "default") =>
+  api.post('/api/admin/request-pair', { phoneNumber, botId });
 
 // Clear WhatsApp auth (forces re-login)
 export const clearAuth = () => api.post('/api/admin/clear-auth');

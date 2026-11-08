@@ -154,6 +154,7 @@ export default function Health() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tick, setTick] = useState(0);
+  const [selectedBot, setSelectedBot] = useState('default');
 
   // Pairing code
   const [phone, setPhone] = useState('');
@@ -165,7 +166,7 @@ export default function Health() {
   const [reconnecting, setReconnecting] = useState(false);
 
   function load() {
-    getHealth()
+    getHealth(selectedBot)
       .then((d) => {
         setData(d);
         setError('');
@@ -244,7 +245,7 @@ export default function Health() {
     setPairCode('');
     setPairLoading(true);
     try {
-      const r = await requestPair(phone.trim());
+      const r = await requestPair(phone.trim(), selectedBot);
       setPairCode(r.code);
       toast('Pairing code ready!');
     } catch (err) {
@@ -258,7 +259,7 @@ export default function Health() {
   if (error) return <ErrorState>{error}</ErrorState>;
   if (!data) return null;
 
-  const { memory, uptime, connected, nodeVersion, pid, platform } = data;
+  const { memory, uptime, connected, nodeVersion, pid, platform, botId } = data;
   // Bun can report heapTotal < heapUsed, so clamp to keep the ratio sane
   const heapPct = Math.min(100, Math.round((memory.heapUsed / memory.heapTotal) * 100));
   const heapTone = toneFor(heapPct);
@@ -266,20 +267,30 @@ export default function Health() {
   return (
     <div>
       <PageHeader title='Bot Health' sub='Process stats · auto-refreshes every 10 s'>
-        <span
-          className={cx(
-            'flex items-center gap-[7px] text-[0.82rem]',
-            connected ? 'text-success' : 'text-danger',
-          )}
-        >
+        <div className='flex items-center gap-[7px] text-[0.82rem]'>
           <span
             className={cx(
-              'size-1.5 rounded-full',
-              connected ? 'bg-success animate-glow' : 'bg-danger',
+              'flex items-center gap-[7px] text-[0.82rem]',
+              connected ? 'text-success' : 'text-danger',
             )}
-          />
-          {connected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'}
-        </span>
+          >
+            <span
+              className={cx(
+                'size-1.5 rounded-full',
+                connected ? 'bg-success animate-glow' : 'bg-danger',
+              )}
+            />
+            {connected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'}
+          </span>
+          <select
+            value={selectedBot}
+            onChange={(e) => setSelectedBot(e.target.value)}
+            className='ml-3 px-2.5 py-1 bg-s2 border border-line rounded-[8px] text-[0.78rem] text-ink focus:border-accent/50'
+          >
+            <option value='default'>Default Bot</option>
+            <option value='bot2'>Bot 2</option>
+          </select>
+        </div>
       </PageHeader>
 
       {/* ── Memory ──────────────────────────────────────────────────────────── */}
