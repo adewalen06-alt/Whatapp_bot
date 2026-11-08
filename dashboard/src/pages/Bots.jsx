@@ -164,7 +164,10 @@ export default function Bots() {
                   <Tr key={bot.botId}>
                     <Td>
                       <strong className='font-mono text-[0.82rem]'>
-                        {bot.botId}{bot.botId === 'default' && ' <span className="text-xs text-muted">(default)</span>'}
+                        {bot.botId}
+                        {bot.botId === 'default' && (
+                          <span className='text-xs text-muted'> (default)</span>
+                        )}
                       </strong>
                     </Td>
                     <Td>
@@ -185,7 +188,6 @@ export default function Bots() {
                           }}
                         >
                           Show QR
-                        </Btn>
                         </Btn>
                       ) : (
                         <span className='text-[0.72rem] text-muted'>—</span>
