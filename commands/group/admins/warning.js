@@ -25,7 +25,7 @@ const handler = async (sock, msg, from, args, msgInfoObj) => {
     }
     // JID is already in correct format (LID or PN)
 
-    let isGroupAdmin = groupAdmins.includes(taggedJid);
+    let isGroupAdmin = groupAdmins.some((adminJid) => extractPhoneNumber(adminJid) === extractPhoneNumber(taggedJid));
     if (command != "unwarn") {
       if (taggedJid == botNumber[0] || taggedJid == botNumber[1])
         return sendMessageWTyping(from, { text: `_How can I warn Myself_` }, { quoted: msg });

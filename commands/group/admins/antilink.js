@@ -1,4 +1,5 @@
 import { getGroupData, group } from "../../../db/groupData.js";
+import { extractPhoneNumber } from "../../../utils/lid.js";
 
 const linkPatterns = {
   whatsappGroup: /chat\.whatsapp\.com\/[A-Za-z0-9]{20,}/i,
@@ -39,7 +40,9 @@ const handler = async (sock, msg, from, args, msgInfoObj) => {
     return sendMessageWTyping(from, { text: "❌ This command only works in groups." }, { quoted: msg });
   }
 
-  const isAdmin = groupAdmins.includes(senderJid) || botNumber.includes(senderJid);
+  const isAdmin =
+    groupAdmins.some((adminJid) => extractPhoneNumber(adminJid) === extractPhoneNumber(senderJid)) ||
+    botNumber.some((bn) => extractPhoneNumber(bn) === extractPhoneNumber(senderJid));
   if (!isAdmin) {
     return sendMessageWTyping(from, { text: "```For Group Admins Only!```" }, { quoted: msg });
   }

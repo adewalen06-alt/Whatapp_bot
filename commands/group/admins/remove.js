@@ -1,4 +1,5 @@
 import { isPrivileged } from "../../../utils/roles.js";
+import { extractPhoneNumber } from "../../../utils/lid.js";
 
 const handler = async (sock, msg, from, args, msgInfoObj) => {
   const { groupAdmins, sendMessageWTyping, groupMetadata, botNumber, extendedMessageOriginal } =
@@ -26,7 +27,7 @@ const handler = async (sock, msg, from, args, msgInfoObj) => {
   if (
     taggedJid === groupMetadata.owner ||
     botNumber.includes(taggedJid) ||
-    groupAdmins.includes(taggedJid) ||
+    groupAdmins.some((adminJid) => extractPhoneNumber(adminJid) === extractPhoneNumber(taggedJid)) ||
     (await isPrivileged(sock, taggedJid))
   ) {
     return sendMessageWTyping(

@@ -485,7 +485,8 @@ const getCommand = async (sock, msg, cache) => {
       });
     }
     const groupAdmins = isGroup ? getGroupAdmins(groupMetadata.participants) : "";
-    const isGroupAdmin = groupAdmins?.includes(senderJid) || false;
+    const senderPN = extractPhoneNumber(senderJid);
+    const isGroupAdmin = groupAdmins?.some((adminJid) => extractPhoneNumber(adminJid) === senderPN) || false;
 
     //--------------------------------------------CHAT-BOT-FEATURE------------------------------------------------//
     const isChatBotOn = groupData ? groupData.isChatBotOn : false;
