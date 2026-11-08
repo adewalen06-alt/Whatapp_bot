@@ -44,6 +44,7 @@ import { recordCommand } from "../db/cmdStats.js";
 import groupMetaStore from "../cache/groupMetaStore.js";
 import { saveChatMessage } from "../utils/chatLogger.js";
 import { getRankUp } from "../utils/ranks.js";
+import { clearMongoDBAuthState } from "./auth.js";
 
 // Short-lived cache for the globally-disabled command list — avoids a Mongo
 // round trip on every single command (was previously fetched fresh each time).
@@ -141,12 +142,18 @@ const getCommand = async (sock, msg, cache) => {
             await sock.sendMessage(to, msgObj, sendOptions);
           } catch (err) {
             console.error("❌ Error sending message:", err.message);
-            // 406 on a group send usually means our cached metadata is stale (bot removed, group
-            // locked/changed). Drop every layer so the next send re-fetches the real state.
-            if (isGroupChat && err.message === "not-acceptable") {
-              cache.del(to + ":groupMetadata");
-              groupMetaStore.del(to);
-              delGroupMeta(to);
+            if (err.message === "not-acceptable") {
+              if (isGroupChat) {
+                cache.del(to + ":groupMetadata");
+                groupMetaStore.del(to);
+                delGroupMeta(to);
+              } else {
+                cache.del(to + ":userMetadata");
+                cache.del(to + ":contact");
+                // 406 on a DM means the linked-device session is stale — clear MongoDB
+                // auth state so the next restart re-pairs via QR instead of looping 406.
+                clearMongoDBAuthState().catch(() => {});
+              }
             }
             throw err;
           } finally {
