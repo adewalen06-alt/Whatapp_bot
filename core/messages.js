@@ -44,7 +44,6 @@ import { recordCommand } from "../db/cmdStats.js";
 import groupMetaStore from "../cache/groupMetaStore.js";
 import { saveChatMessage } from "../utils/chatLogger.js";
 import { getRankUp } from "../utils/ranks.js";
-import { clearMongoDBAuthState } from "./auth.js";
 
 // Short-lived cache for the globally-disabled command list — avoids a Mongo
 // round trip on every single command (was previously fetched fresh each time).
@@ -150,9 +149,8 @@ const getCommand = async (sock, msg, cache) => {
               } else {
                 cache.del(to + ":userMetadata");
                 cache.del(to + ":contact");
-                // 406 on a DM means the linked-device session is stale — clear MongoDB
-                // auth state so the next restart re-pairs via QR instead of looping 406.
-                clearMongoDBAuthState().catch(() => {});
+                // 406 on a DM means the session is stale — clear cached metadata so
+                // the next send re-resolves the recipient.
               }
             }
             throw err;
