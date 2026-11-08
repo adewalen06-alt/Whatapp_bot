@@ -5,7 +5,9 @@ const FLUSH_INTERVAL_MS = 5000;
 const MAX_BUFFER_SIZE = 500;
 
 const collectionFor = (botId) =>
-  mdClient.db("MyBotDataDB").collection(`AuthState_${botId}`);
+  botId === "default"
+    ? mdClient.db("MyBotDataDB").collection("AuthState")
+    : mdClient.db("MyBotDataDB").collection(`AuthState_${botId}`);
 
 const useMongoDBAuthState = async (botId = "default") => {
   const collection = collectionFor(botId);
