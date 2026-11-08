@@ -1,6 +1,6 @@
-import { createSocket } from "./socket.js";
-import { createEvents } from "./events.js";
-import { botManager } from "./botManager.js";
+import { createSocket } from "./core/socket.js";
+import { createEvents } from "./core/events.js";
+import { botManager } from "./core/botManager.js";
 
 let connectionAttempts = new Map();
 const MAX_CONNECTION_ATTEMPTS = 5;
