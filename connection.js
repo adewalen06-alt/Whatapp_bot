@@ -2,6 +2,8 @@ import { createSocket } from "./core/socket.js";
 import { createEvents } from "./core/events.js";
 import { botManager, getBotCache } from "./core/botManager.js";
 
+export { botManager };
+
 let connectionAttempts = new Map();
 const MAX_CONNECTION_ATTEMPTS = 5;
 let lastConnectionTime = new Map();
