@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   getBots, createBot, removeBot, getBotQR, startBot as apiStartBot, stopBot as apiStopBot,
-  fmtUptime,
+  requestPair,
 } from '../lib/api.js';
-import { useWebSocket, useBotStatus } from '../hooks/useWebSocket.js';
+import { useWebSocket } from '../hooks/useWebSocket.js';
 import { useToast } from '../App.jsx';
 import {
   Badge,
@@ -22,6 +22,9 @@ import {
   Th,
   Tr,
   cx,
+  Modal,
+  ModalHeader,
+  Code,
 } from '../components/ui.jsx';
 
 const STATUS_COLORS = {
@@ -46,6 +49,14 @@ export default function Bots() {
   const [creating, setCreating] = useState(false);
   const [newBotId, setNewBotId] = useState('');
   const [newBotNumber, setNewBotNumber] = useState('');
+  const [selectedBotId, setSelectedBotId] = useState(null);
+  const [qrCode, setQrCode] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [pairPhone, setPairPhone] = useState('');
+  const [pairCode, setPairCode] = useState('');
+  const [pairLoading, setPairLoading] = useState(false);
+  const [pairErr, setPairErr] = useState('');
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const loadBots = useCallback(() => {
     getBots()
@@ -58,7 +69,6 @@ export default function Bots() {
     loadBots();
   }, [loadBots]);
 
-  // Refresh when WebSocket status changes
   const { status: _ignored } = useWebSocket();
 
   async function handleCreateBot() {
@@ -111,6 +121,43 @@ export default function Bots() {
     }
   }
 
+  async function handleShowQR(botId) {
+    setQrLoading(true);
+    setSelectedBotId(botId);
+    try {
+      const res = await getBotQR(botId);
+      if (res.qr) {
+        setQrCode(res.qr);
+        setQrModalOpen(true);
+      } else {
+        toast('No QR code available. Bot may be connected or starting.', false);
+      }
+    } catch (err) {
+      toast(err.message, false);
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
+  async function handleGetPairCode(botId) {
+    if (!pairPhone.trim()) {
+      toast('Enter phone number with country code', false);
+      return;
+    }
+    setPairLoading(true);
+    setPairErr('');
+    setPairCode('');
+    try {
+      const res = await requestPair(pairPhone.trim(), botId);
+      setPairCode(res.code);
+      toast('Pairing code ready!');
+    } catch (err) {
+      setPairErr(err.message);
+    } finally {
+      setPairLoading(false);
+    }
+  }
+
   if (loading) return <Loading />;
 
   return (
@@ -150,6 +197,7 @@ export default function Bots() {
                 <Th>Status</Th>
                 <Th>Number</Th>
                 <Th>QR Code</Th>
+                <Th>Pair Code</Th>
                 <Th>Actions</Th>
               </tr>
             </thead>
@@ -157,6 +205,7 @@ export default function Bots() {
               {bots.map((bot) => {
                 const status = bot.status || 'disconnected';
                 const isConnected = status === 'connected';
+                const isQrState = status === 'qr';
                 const botStatusColor = STATUS_COLORS[status] || STATUS_COLORS.disconnected;
                 const botStatusLabel = STATUS_LABELS[status] || status;
 
@@ -179,18 +228,44 @@ export default function Bots() {
                       {bot.botNumber?.[0] || '—'}
                     </Td>
                     <Td>
-                      {status === 'qr' && bot.qr ? (
+                      {isQrState ? (
                         <Btn
                           variant='ghost'
+                          size='sm'
+                          onClick={() => handleShowQR(bot.botId)}
+                          disabled={qrLoading}
+                        >
+                          {qrLoading ? <Spinner size='size-3.5' /> : 'Show QR'}
+                        </Btn>
+                      ) : isConnected ? (
+                        <span className='text-[0.72rem] text-success'>Connected</span>
+                      ) : (
+                        <Btn
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleStartBot(bot.botId)}
+                          disabled={status === 'connecting'}
+                        >
+                          Start
+                        </Btn>
+                      )}
+                    </Td>
+                    <Td>
+                      {!isConnected ? (
+                        <Btn
+                          variant='ghost'
+                          size='sm'
                           onClick={() => {
-                            navigator.clipboard.writeText(bot.qr);
-                            toast('QR code copied to clipboard');
+                            setSelectedBotId(bot.botId);
+                            setPairPhone('');
+                            setPairCode('');
+                            setPairErr('');
                           }}
                         >
-                          Show QR
+                          Get Pair Code
                         </Btn>
                       ) : (
-                        <span className='text-[0.72rem] text-muted'>—</span>
+                        <span className='text-[0.72rem> text-muted'>—</span>
                       )}
                     </Td>
                     <Td>
@@ -199,6 +274,8 @@ export default function Bots() {
                           <Btn variant='smDanger' onClick={() => handleStopBot(bot.botId)}>
                             Stop
                           </Btn>
+                        ) : status === 'connecting' ? (
+                          <span className='text-[0.72rem] text-muted'>Starting…</span>
                         ) : (
                           <Btn variant='sm' onClick={() => handleStartBot(bot.botId)}>
                             Start
@@ -219,11 +296,88 @@ export default function Bots() {
         </TableWrap>
       )}
 
+      {qrModalOpen && (
+        <Modal
+          onClose={() => { setQrModalOpen(false); setQrCode(''); }}
+          maxWidth='max-w-[420px]'
+        >
+          <ModalHeader
+            title='QR Code'
+            sub={`Scan with WhatsApp → Linked Devices → Link a Device`}
+            onClose={() => { setQrModalOpen(false); setQrCode(''); }}
+          />
+          {qrCode ? (
+            <div className='flex flex-col items-center gap-4'>
+              <div className='bg-white p-4 rounded-[12px] shadow-lg'>
+                <Code className='bg-transparent p-0 text-[0.6rem] leading-normal font-mono'>{qrCode}</Code>
+              </div>
+              <p className='text-[0.78rem] text-muted text-center max-w-[300px]'>
+                Scan this QR code with WhatsApp: <strong>Linked Devices → Link a Device</strong>
+              </p>
+              <Btn variant='ghost' onClick={() => navigator.clipboard.writeText(qrCode)}>
+                Copy QR Code
+              </Btn>
+            </div>
+          ) : (
+            <div className='text-center text-muted py-8'>Loading QR code…</div>
+          )}
+        </Modal>
+      )}
+
+      {selectedBotId !== null && !qrModalOpen && (
+        <Modal
+          onClose={() => { setSelectedBotId(null); setPairPhone(''); setPairCode(''); setPairErr(''); }}
+          maxWidth='max-w-[420px]'
+        >
+          <ModalHeader
+            title='Pairing Code'
+            sub={`Enter phone number to get a pairing code for ${selectedBotId}`}
+            onClose={() => { setSelectedBotId(null); setPairPhone(''); setPairCode(''); setPairErr(''); }}
+          />
+          <div className='flex flex-col gap-3'>
+            <Field label='Phone Number' hint='With country code (e.g. 2349137250390)'>
+              <Input
+                type='tel'
+                placeholder='2349137250390'
+                value={pairPhone}
+                onChange={(e) => { setPairPhone(e.target.value); setPairErr(''); setPairCode(''); }}
+                className='font-mono'
+              />
+            </Field>
+            <Btn
+              variant='primary'
+              onClick={() => handleGetPairCode(selectedBotId)}
+              disabled={pairLoading || !pairPhone.trim()}
+            >
+              {pairLoading ? <Spinner size='size-3.5' /> : 'Get Pairing Code'}
+            </Btn>
+            {pairErr && <p className='text-[0.75rem] text-danger'>{pairErr}</p>}
+            {pairCode && (
+              <div className='flex flex-col items-center gap-3'>
+                <p className='text-[0.67rem] text-accent font-bold uppercase tracking-widest'>
+                  Pairing Code
+                </p>
+                <Code className='bg-accent/10 text-accent text-[1.5rem] tracking-[0.2em] font-mono px-4 py-2 rounded-[10px]'>
+                  {pairCode}
+                </Code>
+                <p className='text-[0.7rem] text-muted text-center'>
+                  WhatsApp → Linked Devices → Link a Device → Link with phone number
+                </p>
+                <Btn variant='ghost' onClick={() => navigator.clipboard.writeText(pairCode)}>
+                  Copy
+                </Btn>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
       <Card className='mt-6'>
         <CardTitle>How it works</CardTitle>
         <p className='text-[0.78rem] text-soft leading-relaxed'>
           Each bot runs as an independent WhatsApp instance with its own session stored in
-          MongoDB. Scan the QR code for each bot to link it to a WhatsApp account. The default
+          MongoDB. Use <strong>Show QR</strong> to scan with WhatsApp camera, or
+          <strong>Get Pair Code</strong> to link via phone number. The default
           bot starts automatically on server boot.
         </p>
       </Card>

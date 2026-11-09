@@ -395,7 +395,10 @@ router.post("/api/admin/request-pair", requireAdmin, async (req, res) => {
   const sock = botManager.getSock(botId);
   if (!sock) return res.status(503).json({ error: `Bot ${botId} socket is not ready.` });
 
-  if (sock.authState?.creds?.registered) {
+  // Only block if bot is connected AND already registered
+  const isConnected = sock.user != null;
+  const isRegistered = sock.authState?.creds?.registered === true;
+  if (isConnected && isRegistered) {
     return res
       .status(400)
       .json({ error: "Bot is already logged in. Clear auth first, then restart the bot." });
