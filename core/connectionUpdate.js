@@ -29,6 +29,16 @@ const getConnectionUpdate = async (botId, startSock, events) => {
       errorMessage.toLowerCase().includes("prekey");
 
     if (isTrueLogout) {
+      // WhatsApp explicitly logged out this device — stored creds are invalid.
+      // Clear them so the next connect gets a fresh QR instead of looping on 401.
+      try {
+        const deleted = await clearMongoDBAuthState(botId);
+        console.log(
+          `[${botId}] 🧹 Cleared ${deleted} stale auth state documents after logout, fresh QR required`,
+        );
+      } catch (err) {
+        console.error(`[${botId}] Error clearing auth state after logout:`, err.message);
+      }
       console.log(`[${botId}] ❌ Device logged out, manual re-authentication required`);
       notifyOwner(
         null,

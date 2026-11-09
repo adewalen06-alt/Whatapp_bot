@@ -52,7 +52,6 @@ export const startBot = async (botId = "default", reason = "initial") => {
       const botCache = getBotCache(botId);
       createEvents(sock, startBot, botCache, botId);
       connectionAttempts.set(botId, 0);
-      botManager.setStatus(botId, "connected");
       console.log(`[${botId}] ✅ Socket connection established successfully`);
       return sock;
     }
