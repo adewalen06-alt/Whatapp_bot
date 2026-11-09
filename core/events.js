@@ -61,7 +61,7 @@ export const createEvents = (sock, startSock, cache, botId = "default") => {
       }
 
       if (event["connection.update"]) {
-        await getConnectionUpdate(startSock, event["connection.update"]);
+        await getConnectionUpdate(botId, startSock, event["connection.update"]);
         const { qr, isOnline, connection } = event["connection.update"];
 
         if (qr) {
