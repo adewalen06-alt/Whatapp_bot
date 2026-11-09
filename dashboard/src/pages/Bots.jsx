@@ -309,7 +309,14 @@ export default function Bots() {
           {qrCode ? (
             <div className='flex flex-col items-center gap-4'>
               <div className='bg-white p-4 rounded-[12px] shadow-lg'>
-                <Code className='bg-transparent p-0 text-[0.6rem] leading-normal font-mono'>{qrCode}</Code>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrCode)}&size=300x300`}
+                  alt='WhatsApp QR code'
+                  className='rounded-[8px] shadow-md border border-line'
+                  loading='eager'
+                  decoding='async'
+                  referrerPolicy='no-referrer'
+                />
               </div>
               <p className='text-[0.78rem] text-muted text-center max-w-[300px]'>
                 Scan this QR code with WhatsApp: <strong>Linked Devices → Link a Device</strong>
@@ -317,6 +324,12 @@ export default function Bots() {
               <Btn variant='ghost' onClick={() => navigator.clipboard.writeText(qrCode)}>
                 Copy QR Code
               </Btn>
+              <details className='text-xs text-muted text-left mt-4'>
+                <summary className='cursor-pointer hover:text-accent'>Raw QR text</summary>
+                <Code className='block bg-s2 p-2 rounded mt-2 text-[0.55rem] leading-none w-[260px] break-all'>
+                  {qrCode}
+                </Code>
+              </details>
             </div>
           ) : (
             <div className='text-center text-muted py-8'>Loading QR code…</div>
