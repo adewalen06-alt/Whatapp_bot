@@ -65,17 +65,25 @@ const getConnectionUpdate = async (botId, startSock, events) => {
         ? "Session conflict (another device connected)"
         : `Status ${statusCode}`;
 
+      // QR timeout (408) means the QR was never scanned — do not auto-reconnect,
+      // otherwise a new QR generates endlessly without user action. Require manual start.
+      const isQrTimeout = statusCode === 408 || errorMessage.includes("QR refs attempts ended");
+
       console.log(`🔄 Reconnecting... Reason: ${reason}`);
       notifyOwner(
         null,
         `🔄 <b>Bot Disconnected</b>\n` +
           `━━━━━━━━━━━━━━\n` +
           `📋 <b>Reason:</b> ${escapeHtml(reason)}\n` +
-          `⏳ Reconnecting in 5 seconds...`,
+          (isQrTimeout
+            ? `⚠️ QR code expired. Scan a new QR from the dashboard to reconnect.`
+            : `⏳ Reconnecting in 5 seconds...`),
       );
-      setTimeout(() => {
-        startSock("reconnect");
-      }, 5000);
+      if (!isQrTimeout) {
+        setTimeout(() => {
+          startSock("reconnect");
+        }, 5000);
+      }
     }
   } else if (connection === "connecting") {
     console.log("🔗 Connecting to WhatsApp...");
