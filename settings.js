@@ -1,4 +1,4 @@
-require('dotenv').config();
+import 'dotenv/config';
 
 const settings = {
   packname: 'Knight Bot',
@@ -6,7 +6,7 @@ const settings = {
   botName: "Knight Bot",
   botOwner: 'Professor', // Your name
   ownerNumber: '919876543210', //Set your number here without + symbol, just add country code & number without any space
-  giphyApiKey: 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq',
+  giphyApiKey: process.env.GIPHY_API_KEY || '',
   commandMode: "public",
   maxStoreMessages: 20, 
   storeWriteInterval: 10000,
@@ -25,4 +25,4 @@ const settings = {
   aiApiKey: process.env.AI_API_KEY || 'knight',
 };
 
-module.exports = settings;
+export default settings;
