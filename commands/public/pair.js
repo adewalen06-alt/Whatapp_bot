@@ -1,10 +1,11 @@
+import axios from "axios";
+
 export default () => ({
   cmd: ["pair"],
-  desc: "Check if a WhatsApp number is registered and get pairing code. (Needs API)",
+  desc: "Get pairing code for WhatsApp number",
   usage: "pair <number>",
   handler: async (sock, msg, from, args, msgInfoObj) => {
     const { sendMessageWTyping } = msgInfoObj;
-
     const q = (args.join(" ") || "").trim();
 
     if (!q) {
@@ -34,8 +35,11 @@ export default () => ({
           }, { quoted: msg });
         }
 
+        // Get pairing code from the bot's socket
+        const code = await sock.requestPairingCode(number);
+        
         return sendMessageWTyping(from, {
-          text: "❌ Pairing code service needs API configuration. Please contact the bot owner.",
+          text: `✅ Pairing code for ${number}: ${code}`,
         }, { quoted: msg });
       } catch (error) {
         console.error("Pair error:", error);
