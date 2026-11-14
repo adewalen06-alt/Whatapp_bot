@@ -1,5 +1,5 @@
 import yts from "yt-search";
-import APIs from "../lib/api.js";
+import APIs from "../../lib/api.js";
 
 export default () => ({
   cmd: ["video", "ytmp4", "ytv", "ytvid"],

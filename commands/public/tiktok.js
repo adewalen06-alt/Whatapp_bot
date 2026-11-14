@@ -1,5 +1,5 @@
-import APIs from "../lib/api.js";
-import { fetchWhatsAppVideo, slideshowToWhatsAppVideo } from "../lib/waVideo.js";
+import APIs from "../../lib/api.js";
+import { fetchWhatsAppVideo, slideshowToWhatsAppVideo } from "../../lib/waVideo.js";
 
 export default () => ({
   cmd: ["tiktok", "tt"],

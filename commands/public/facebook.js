@@ -1,4 +1,4 @@
-import APIs from "../lib/api.js";
+import APIs from "../../lib/api.js";
 
 export default () => ({
   cmd: ["facebook", "fb"],
