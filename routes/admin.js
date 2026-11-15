@@ -18,7 +18,6 @@ import {
   isAllowedGoogleProfile,
 } from "../utils/adminAuth.js";
 import { escapeHtml } from "../notify/telegram.js";
-import { botManager, startBot, stopBot } from "../connection.js";
 
 const router = Router();
 
@@ -263,8 +262,6 @@ router.get("/api/admin/analytics", requireAdmin, async (req, res) => {
 router.get("/api/admin/bot/health", requireAdmin, (req, res) => {
   try {
     const mem = process.memoryUsage();
-    const botId = req.query.botId || "default";
-    const sock = botManager.getSock(botId);
     res.json({
       uptime: Math.floor(process.uptime()),
       memory: {
@@ -273,8 +270,7 @@ router.get("/api/admin/bot/health", requireAdmin, (req, res) => {
         rss: mem.rss,
         external: mem.external,
       },
-      connected: !!sock?.user,
-      botId,
+      connected: !!req.app.locals.sock?.user,
       nodeVersion: process.version,
       pid: process.pid,
       platform: process.platform,
@@ -389,16 +385,13 @@ router.post("/api/admin/logout-bot", requireAdmin, async (req, res) => {
 
 // ── API: Pairing code (admin dashboard - requires auth) ───────────────────────
 router.post("/api/admin/request-pair", requireAdmin, async (req, res) => {
-  const { phoneNumber, botId = "default" } = req.body;
+  const { phoneNumber } = req.body;
   if (!phoneNumber) return res.status(400).json({ error: "Phone number is required." });
 
-  const sock = botManager.getSock(botId);
-  if (!sock) return res.status(503).json({ error: `Bot ${botId} socket is not ready.` });
+  const sock = req.app.locals.sock;
+  if (!sock) return res.status(503).json({ error: "Bot socket is not ready." });
 
-  // Only block if bot is connected AND already registered
-  const isConnected = sock.user != null;
-  const isRegistered = sock.authState?.creds?.registered === true;
-  if (isConnected && isRegistered) {
+  if (sock.authState?.creds?.registered) {
     return res
       .status(400)
       .json({ error: "Bot is already logged in. Clear auth first, then restart the bot." });
@@ -410,7 +403,7 @@ router.post("/api/admin/request-pair", requireAdmin, async (req, res) => {
     if (clean.length < 7) return res.status(400).json({ error: "Invalid phone number." });
 
     const code = await sock.requestPairingCode(clean);
-    res.json({ ok: true, code, botId });
+    res.json({ ok: true, code });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -696,70 +689,6 @@ router.post("/api/admin/dm", requireAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// ── API: Multi-bot management ──────────────────────────────────────────────────
-router.get("/api/bots", requireAdmin, (_req, res) => {
-  res.json({ bots: botManager.getAll() });
-});
-
-router.post("/api/bots", requireAdmin, async (req, res) => {
-  const { botId, botNumber, myNumber, action } = req.body;
-  if (action === 'start' || action === 'stop') {
-    if (!botId) return res.status(400).json({ error: "botId is required" });
-    try {
-      if (action === 'start') {
-        await startBot(botId, "api");
-      } else {
-        await stopBot(botId);
-      }
-      res.json({ ok: true, botId, action });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    return;
-  }
-  if (!botId) return res.status(400).json({ error: "botId is required" });
-  if (botManager.has(botId)) {
-    return res.status(409).json({ error: `Bot ${botId} already exists` });
-  }
-  botManager.register(botId, { botNumber, myNumber });
-  try {
-    await startBot(botId, "api");
-    res.json({ ok: true, botId });
-  } catch (err) {
-    botManager.unregister(botId);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.delete("/api/bots/:botId", requireAdmin, async (req, res) => {
-  const { botId } = req.params;
-  if (botId === "default") {
-    return res.status(400).json({ error: "Cannot remove default bot" });
-  }
-  await stopBot(botId);
-  res.json({ ok: true, botId });
-});
-
-router.get("/api/bots/:botId", requireAdmin, (_req, res) => {
-  const botId = _req.params.botId;
-  const bot = botManager.get(botId);
-  if (!bot) return res.status(404).json({ error: "Bot not found" });
-  res.json({
-    botId,
-    status: botManager.getStatus(botId),
-    qr: botManager.getQR(botId),
-    botNumber: bot.botNumber,
-    myNumber: bot.myNumber,
-  });
-});
-
-router.get("/api/bots/:botId/qr", requireAdmin, (_req, res) => {
-  const botId = _req.params.botId;
-  const qr = botManager.getQR(botId);
-  const status = botManager.getStatus(botId);
-  res.json({ botId, qr, status });
 });
 
 export default router;

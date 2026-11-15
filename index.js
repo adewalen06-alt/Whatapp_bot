@@ -1,4 +1,4 @@
-import { startBot, stopBot, onNewBot } from "./connection.js";
+import startSock, { onNewSock } from "./connection.js";
 import { mongoReady } from "./db/client.js";
 import { startReminderScheduler } from "./utils/reminderScheduler.js";
 import getDate from "./utils/date.js";
@@ -11,7 +11,6 @@ import {
   getLogs,
   getActivity,
 } from "./notify/adminEvents.js";
-import { botManager } from "./core/botManager.js";
 
 // ── Console interceptor — feeds log ring buffer + deduplication ──────────────
 const _log = console.log.bind(console);
@@ -21,6 +20,7 @@ const _error = console.error.bind(console);
 
 const _SESSION_SPAM = ["Closing session:", "Removing old closed session:"];
 
+// Suppress "Credentials saved to MongoDB" within 10s of startup (creds flush storm)
 let _startupTime = Date.now();
 function _suppressStartupNoise(msg) {
   if (msg === "💾 Credentials saved to MongoDB" && Date.now() - _startupTime < 10000) return true;
@@ -63,6 +63,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// The dashboard and the QR page are served by this server (same origin; the vite dev server proxies /api),
+// so no CORS headers are needed. This used to answer "Access-Control-Allow-Origin: *" with credentials to
+// every site. CORS_ORIGINS (comma-separated) is an explicit opt-in for anything else.
 const corsOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
@@ -86,22 +89,26 @@ if (!process.env.ADMIN_PASSWORD) {
   console.warn("ADMIN_PASSWORD is not set — password login is disabled (Google login only).");
 }
 
+// Behind nginx: req.ip must be the client IP (login rate limit keys on it). Keep the app port
+// bound to localhost, otherwise X-Forwarded-For can be spoofed by direct connections.
 app.set("trust proxy", 1);
 
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  rolling: true,
+  rolling: true, // every visit pushes the 30-day expiry forward
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_KEY,
     ttl: 30 * 24 * 60 * 60,
     touchAfter: 60 * 60,
   }),
+  // "auto": Secure flag when the request came in over HTTPS (nginx sends X-Forwarded-Proto), plain over local HTTP
   cookie: { secure: "auto", httpOnly: true, sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 },
 });
 app.use(sessionMiddleware);
 
+// ── Passport / Google OAuth ────────────────────────────────────────────────────
 const baseUrl = (process.env.HOST_URL || "http://localhost:8000").replace(/\/$/, "");
 const googleAuthEnabled = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
@@ -135,6 +142,7 @@ app.use(
   }),
 );
 
+// Serve the React dashboard build (public/app/) at /admin
 app.use(
   "/admin",
   express.static(path.join(__dirname, "public", "app"), { maxAge: "1d", etag: false }),
@@ -151,10 +159,12 @@ app.get("/", (_req, res) => {
   res.redirect("/admin/");
 });
 
+// Liveness probe for the Docker healthcheck / build.sh health (process is up; says nothing about WhatsApp).
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/", adminRouter);
 
+// SPA catch-all: any /admin/* path that wasn't handled above → serve React index.html
 const reactIndex = path.join(__dirname, "public", "app", "index.html");
 app.get("/admin", (_req, res) => res.sendFile(reactIndex));
 app.get("/admin/*", (req, res, next) => {
@@ -185,72 +195,76 @@ const wss = new WebSocketServer({
   perMessageDeflate: true,
 });
 
+// ── Bot connection state ───────────────────────────────────────────────────────
+// Persists across sock reconnections via the onNewSock hook in connection.js
+let botConnected = false;
+let lastQR = null; // Last QR code received; replayed to late-joining browser clients
+let lastQRTimer = null; // Timer to clear lastQR after it expires (~60 s)
+
+// Only QR + connection status are public (the QR login page needs them). Everything else
+// (logs, activity, sending) is admin-only: the socket is tied to the admin session cookie.
 const PUBLIC_WS_EVENTS = new Set(["qr", "status"]);
 
-function broadcast(payload, botId = null) {
+function broadcast(payload) {
   const msg = JSON.stringify(payload);
+  const isPublic = PUBLIC_WS_EVENTS.has(payload.type);
   wss.clients.forEach((client) => {
-    if (client.readyState !== WebSocket.OPEN) return;
-    if (!client.isAdmin && !PUBLIC_WS_EVENTS.has(payload.type)) return;
-    // If botId specified, only send to clients subscribed to that bot
-    if (botId && client.subscribedBotId && client.subscribedBotId !== botId) return;
-    client.send(msg);
+    if (client.readyState === WebSocket.OPEN && (isPublic || client.isAdmin)) client.send(msg);
   });
 }
 
+// Runs the express-session middleware on the upgrade request to read the admin flag.
 const isAdminRequest = (req) =>
   new Promise((resolve) =>
     sessionMiddleware(req, {}, () => resolve(req.session?.isAdmin === true)),
   ).catch(() => false);
 
-// ── Called for every new bot socket ──────────────────────────────────────────
-function handleNewBot(botId, sock) {
-  botManager.setSock(botId, sock);
-  app.locals.botManager = botManager;
-
-  // Backward compat: keep app.locals.sock pointing to the default bot's socket
-  // so existing endpoints (health, pairing, DM, etc.) still work.
-  if (botId === "default") app.locals.sock = sock;
+// ── Called for every new sock — including reconnects ─────────────────────────
+// This is the fix for the stale-sock bug: we always attach our listener to
+// whichever sock is currently live, and always keep app.locals.sock current.
+function handleNewSock(sock) {
+  app.locals.sock = sock; // always up-to-date reference for admin routes
 
   sock.ev.on("connection.update", (update) => {
     const { qr, isOnline, connection } = update;
 
     if (qr) {
-      botManager.setStatus(botId, "qr");
-      botManager.setQR(botId, qr);
-      broadcast({ type: "qr", botId, qr });
+      botConnected = false;
+      lastQR = qr;
+      // QR codes expire (~60 s); clear stored copy so stale QR isn't replayed
+      clearTimeout(lastQRTimer);
+      lastQRTimer = setTimeout(() => {
+        lastQR = null;
+      }, 60_000);
+      broadcast({ type: "qr", qr });
     }
 
     if (isOnline || connection === "open") {
-      botManager.setStatus(botId, "connected");
-      botManager.clearQR(botId);
-      broadcast({ type: "status", botId, status: "connected" });
+      botConnected = true;
+      lastQR = null;
+      clearTimeout(lastQRTimer);
+      broadcast({ type: "status", status: "connected" });
     }
 
     if (connection === "close") {
-      botManager.setStatus(botId, "disconnected");
-      broadcast({ type: "status", botId, status: "disconnected" });
-      // Clear app.locals.sock if default bot disconnected
-      if (botId === "default" && app.locals.sock === sock) {
-        app.locals.sock = null;
-      }
+      botConnected = false;
+      broadcast({ type: "status", status: "disconnected" });
     }
   });
 }
 
-// Register hook before calling startBot so it fires for the very first bot too
-onNewBot(handleNewBot);
+// Register hook before calling startSock so it fires for the very first sock too
+onNewSock(handleNewSock);
 
 // Forward admin events (logs, activity) to all connected WS clients
 subscribeAdminEvents((event) => broadcast(event));
 
-// Expose bot manager for admin routes
-app.locals.botManager = botManager;
-app.locals.startBot = startBot;
-app.locals.stopBot = stopBot;
+// Expose startSock so admin routes can trigger a reconnect without restarting the process
+app.locals.reconnect = () => startSock("manual-reconnect");
 
 // ── WebSocket server ──────────────────────────────────────────────────────────
 wss.on("connection", async (ws, req) => {
+  // Browsers always send Origin; reject cross-site pages trying to open this socket.
   const origin = req.headers.origin;
   if (origin) {
     let sameHost = false;
@@ -262,18 +276,20 @@ wss.on("connection", async (ws, req) => {
     if (!sameHost) return ws.close(1008, "Forbidden origin");
   }
 
-  ws.on("error", () => {});
+  ws.on("error", () => {}); // covers the gap while the session is looked up; real handler is attached below
   ws.isAdmin = await isAdminRequest(req);
   if (ws.readyState !== WebSocket.OPEN) return;
 
-  // Send current state of all bots
-  const allBots = botManager.getAll();
-  ws.send(
-    JSON.stringify({
-      type: "bots_snapshot",
-      bots: allBots,
-    }),
-  );
+  // Tell newly connected browser clients the current state immediately.
+  // Also check sock.user as a live fallback in case botConnected is stale.
+  const isConnected = botConnected || app.locals.sock?.user != null;
+  if (isConnected) {
+    botConnected = true; // sync flag
+    ws.send(JSON.stringify({ type: "status", status: "connected" }));
+  } else if (lastQR) {
+    // Browser missed the QR broadcast — replay the stored copy
+    ws.send(JSON.stringify({ type: "qr", qr: lastQR }));
+  }
 
   // Replay recent logs + activity to admins only
   if (ws.isAdmin) {
@@ -293,93 +309,24 @@ wss.on("connection", async (ws, req) => {
       return;
     }
     try {
-      const data = JSON.parse(raw);
-
-      // Subscribe to a specific bot's events
-      if (data.type === "subscribe_bot") {
-        ws.subscribedBotId = data.botId || "default";
-        ws.send(
-          JSON.stringify({
-            type: "subscribed",
-            botId: ws.subscribedBotId,
-          }),
-        );
+      const { to, message } = JSON.parse(raw);
+      if (!to || !message) {
+        ws.send(JSON.stringify({ type: "error", error: "Invalid request" }));
         return;
       }
-
-      // Send a message via a specific bot
-      if (data.type === "send_message") {
-        const { botId = "default", to, message } = data;
-        if (!to || !message) {
-          ws.send(JSON.stringify({ type: "error", error: "Invalid request" }));
-          return;
-        }
-        if (message.length > 4096) {
-          ws.send(JSON.stringify({ type: "error", error: "Message too long" }));
-          return;
-        }
-        try {
-          const sock = botManager.getSock(botId);
-          if (!sock || !sock.user) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error: `Bot ${botId} is not connected`,
-              }),
-            );
-            return;
-          }
-          const jid = await normalizeJID(sock, to);
-          await messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0);
-          console.log("Message sent via bot", botId, "to", to, ":", message);
-          ws.send(JSON.stringify({ type: "success", success: "Message sent", botId }));
-        } catch (err) {
-          console.error("Error handling WebSocket message:", err);
-          ws.send(JSON.stringify({ type: "error", error: "Failed to send message" }));
-        }
+      if (message.length > 4096) {
+        ws.send(JSON.stringify({ type: "error", error: "Message too long" }));
         return;
       }
-
-      // Start a bot
-      if (data.type === "start_bot") {
-        const { botId = "default" } = data;
-        try {
-          await startBot(botId, "websocket");
-          ws.send(JSON.stringify({ type: "success", success: `Bot ${botId} started`, botId }));
-        } catch (err) {
-          ws.send(JSON.stringify({ type: "error", error: err.message }));
-        }
-        return;
-      }
-
-      // Stop a bot
-      if (data.type === "stop_bot") {
-        const { botId = "default" } = data;
-        try {
-          await stopBot(botId);
-          ws.send(JSON.stringify({ type: "success", success: `Bot ${botId} stopped`, botId }));
-        } catch (err) {
-          ws.send(JSON.stringify({ type: "error", error: err.message }));
-        }
-        return;
-      }
-
-      // Legacy single-bot send (backward compat)
-      const { to, message } = data;
-      if (to || message) {
-        const sock = botManager.getSock("default");
-        if (!sock || !sock.user) {
-          ws.send(JSON.stringify({ type: "error", error: "Default bot is not connected" }));
-          return;
-        }
-        const jid = await normalizeJID(sock, to);
-        await messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0);
-        console.log("Message sent to", to, ":", message);
-        ws.send(JSON.stringify({ type: "success", success: "Message sent" }));
-      }
+      // Always use the live sock reference (fixes stale-sock bug for messages too)
+      const sock = app.locals.sock;
+      const jid = await normalizeJID(sock, to);
+      await messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0);
+      console.log("Message sent to", to, ":", message);
+      ws.send(JSON.stringify({ type: "success", success: "Message sent" }));
     } catch (err) {
       console.error("Error handling WebSocket message:", err);
-      ws.send(JSON.stringify({ type: "error", error: "Failed to process message" }));
+      ws.send(JSON.stringify({ type: "error", error: "Failed to send message" }));
     }
   });
 
@@ -393,25 +340,19 @@ wss.on("connection", async (ws, req) => {
 // ── Bot start ─────────────────────────────────────────────────────────────────
 async function startServer() {
   await mongoReady;
-
-  // Register and start the default bot
-  botManager.register("default");
-  await startBot("default", "start");
-
+  await startSock("start");
   startReminderScheduler();
+  // handleNewSock() is called by the onNewSock hook inside connection.js,
+  // so app.locals.sock and connection.update listener are both set up there.
 
   app.post("/send", async (req, res) => {
-    const { to, message, botId = "default" } = req.body;
+    const { to, message } = req.body;
     if (!to || !message) {
       return res.status(400).send({ message: "Invalid request" });
     }
 
     try {
-      const sock = botManager.getSock(botId);
-      if (!sock || !sock.user) {
-        return res.status(500).send({ message: `Bot ${botId} is not connected` });
-      }
-
+      const sock = app.locals.sock; // live reference
       if (Array.isArray(to)) {
         const jids = await Promise.all(to.map((r) => normalizeJID(sock, r)));
         await Promise.all(
@@ -419,8 +360,8 @@ async function startServer() {
             messageQueue.enqueue(jid, () => sock.sendMessage(jid, { text: message }), 0),
           ),
         );
-        console.log("Message queued for multiple recipients via bot", botId);
-        return res.send({ message: "Messages queued", botId });
+        console.log("Message queued for multiple recipients");
+        return res.send({ message: "Messages queued" });
       } else {
         const recipientJid = await normalizeJID(sock, to);
         await messageQueue.enqueue(
@@ -428,8 +369,8 @@ async function startServer() {
           () => sock.sendMessage(recipientJid, { text: message }),
           0,
         );
-        console.log("Message queued for:", to, "via bot", botId);
-        return res.send({ message: "Message queued", botId });
+        console.log("Message queued for:", to);
+        return res.send({ message: "Message queued" });
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -449,17 +390,13 @@ process.on("uncaughtException", function (err) {
 
 function gracefulShutdown(signal) {
   console.log(`\n🔄 Received ${signal}. Starting graceful shutdown...`);
+  // End WA socket first so its ws "close" handler flushes pending session
+  // keys to Mongo — skip this and a crash mid-write leaves a stale session,
+  // which shows up next boot as Bad MAC until the ratchet resyncs.
   try {
-    for (const botId of botManager.getBotIds()) {
-      try {
-        const sock = botManager.getSock(botId);
-        if (sock) sock.end(undefined);
-      } catch (err) {
-        console.error(`Error ending socket for bot ${botId}:`, err.message);
-      }
-    }
+    app.locals.sock?.end(undefined);
   } catch (err) {
-    console.error("Error ending WA sockets during shutdown:", err.message);
+    console.error("Error ending WA socket during shutdown:", err.message);
   }
   server.close(() => {
     console.log("✅ HTTP server closed");

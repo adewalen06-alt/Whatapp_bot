@@ -47,15 +47,14 @@ export const memberAction = (jid, action) =>
 export const getAnalytics = () => api.get('/api/admin/analytics');
 
 // Health
-export const getHealth = (botId = "default") => api.get(`/api/admin/bot/health?botId=${encodeURIComponent(botId)}`);
+export const getHealth = () => api.get('/api/admin/bot/health');
 
 // Broadcast
 export const broadcast = (message, targetJids) =>
   api.post('/api/admin/broadcast', { message, targetJids });
 
 // Pairing code login
-export const requestPair = (phoneNumber, botId = "default") =>
-  api.post('/api/admin/request-pair', { phoneNumber, botId });
+export const requestPair = (phoneNumber) => api.post('/api/admin/request-pair', { phoneNumber });
 
 // Clear WhatsApp auth (forces re-login)
 export const clearAuth = () => api.post('/api/admin/clear-auth');
@@ -77,16 +76,6 @@ export const getActivity = () => api.get('/api/admin/activity');
 
 // Command usage stats
 export const getCommandStats = () => api.get('/api/admin/command-stats');
-
-// ── Multi-bot management ──
-export const getBots = () => api.get('/api/bots');
-export const createBot = (botId, botNumber, myNumber) =>
-  api.post('/api/bots', { botId, botNumber, myNumber });
-export const removeBot = (botId) => api.delete(`/api/bots/${encodeURIComponent(botId)}`);
-export const getBot = (botId) => api.get(`/api/bots/${encodeURIComponent(botId)}`);
-export const getBotQR = (botId) => api.get(`/api/bots/${encodeURIComponent(botId)}/qr`);
-export const startBot = (botId) => api.post('/api/bots', { botId, action: 'start' });
-export const stopBot = (botId) => api.post('/api/bots', { botId, action: 'stop' });
 
 // Direct message
 export const sendDirect = (jid, message) => api.post('/api/admin/dm', { jid, message });

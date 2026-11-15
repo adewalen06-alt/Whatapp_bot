@@ -141,17 +141,12 @@ const getCommand = async (sock, msg, cache) => {
             await sock.sendMessage(to, msgObj, sendOptions);
           } catch (err) {
             console.error("❌ Error sending message:", err.message);
-            if (err.message === "not-acceptable") {
-              if (isGroupChat) {
-                cache.del(to + ":groupMetadata");
-                groupMetaStore.del(to);
-                delGroupMeta(to);
-              } else {
-                cache.del(to + ":userMetadata");
-                cache.del(to + ":contact");
-                // 406 on a DM means the session is stale — clear cached metadata so
-                // the next send re-resolves the recipient.
-              }
+            // 406 on a group send usually means our cached metadata is stale (bot removed, group
+            // locked/changed). Drop every layer so the next send re-fetches the real state.
+            if (isGroupChat && err.message === "not-acceptable") {
+              cache.del(to + ":groupMetadata");
+              groupMetaStore.del(to);
+              delGroupMeta(to);
             }
             throw err;
           } finally {
@@ -482,9 +477,8 @@ const getCommand = async (sock, msg, cache) => {
         }
       });
     }
-    const groupAdmins = isGroup ? getGroupAdmins(groupMetadata.participants) : [];
-    const senderPN = extractPhoneNumber(senderJid);
-    const isGroupAdmin = groupAdmins.some((adminJid) => extractPhoneNumber(adminJid) === senderPN) || false;
+    const groupAdmins = isGroup ? getGroupAdmins(groupMetadata.participants) : "";
+    const isGroupAdmin = groupAdmins?.includes(senderJid) || false;
 
     //--------------------------------------------CHAT-BOT-FEATURE------------------------------------------------//
     const isChatBotOn = groupData ? groupData.isChatBotOn : false;
